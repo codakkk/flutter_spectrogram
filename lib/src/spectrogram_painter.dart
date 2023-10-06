@@ -28,7 +28,6 @@ class SpectrogramPainter extends CustomPainter {
 
     if (_backBuffer != null) {
       canvas.drawImage(_backBuffer!, Offset.zero, Paint());
-      debugPrint('image');
     }
   }
 
