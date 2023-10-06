@@ -17,19 +17,22 @@ class SpectrogramPainter extends CustomPainter {
 
   final Color dominantColor;
 
-  ui.Picture? _backPicture;
+  ui.Image? _backBuffer;
 
   // y-axis represents frequencies
   // x-axis represents (positive) time
   // intensity of colors represent amplitude of frequencies
   @override
   void paint(Canvas canvas, Size size) {
-    _backPicture ??= _renderToPicture(size);
+    _renderToBackBuffer(size);
 
-    canvas.drawPicture(_backPicture!);
+    if (_backBuffer != null) {
+      canvas.drawImage(_backBuffer!, Offset.zero, Paint());
+      debugPrint('image');
+    }
   }
 
-  ui.Picture _renderToPicture(Size size) {
+  void _renderToBackBuffer(Size size) {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
 
@@ -82,7 +85,9 @@ class SpectrogramPainter extends CustomPainter {
     }
 
     // .toImage(size.width.floor(), size.height.floor());
-    return recorder.endRecording();
+    final picture = recorder.endRecording();
+
+    _backBuffer = picture.toImageSync(size.width.floor(), size.height.floor());
   }
 
   double getNeighborValues(
