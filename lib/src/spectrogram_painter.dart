@@ -43,9 +43,9 @@ class SpectrogramPainter extends CustomPainter {
 
     // Rotate by 180 degrees
     // This rotation is based on my calculation using fftea package.
-    canvas.translate(size.width * 0.5, size.height * 0.5);
-    canvas.rotate(math.pi);
-    canvas.translate(-size.width * 0.5, -size.height * 0.5);
+    // canvas.translate(size.width * 0.5, size.height * 0.5);
+    // canvas.rotate(-math.pi);
+    // canvas.translate(-size.width * 0.5, -size.height * 0.5);
 
     for (var j = 0; j < _numYDivisions; j++) {
       for (var i = 0; i < _numXDivisions; i++) {
