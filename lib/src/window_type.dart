@@ -26,13 +26,15 @@ Float64List _gaussian(
   double alpha = 0.25,
 }) {
   final res = Float64List(bufferSize);
+  final samplingPeriods = (bufferSize - 1) * 0.5;
+  final standardDeviation = (alpha * (bufferSize - 1)) * 0.5;
   for (int i = 0; i < bufferSize; i++) {
     res[i] = math
         .pow(
           math.e,
           -0.5 *
               math.pow(
-                (i - (bufferSize - 1) / 2) / ((alpha * (bufferSize - 1)) / 2),
+                (i - samplingPeriods) / standardDeviation,
                 2,
               ),
         )
