@@ -1,6 +1,7 @@
 import 'package:fftea/fftea.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_spectrogram/flutter_spectrogram.dart';
+import 'package:flutter_spectrogram/src/data/fft/fft_table.dart';
 import 'dart:math' as math;
 
 import 'sound.dart';
@@ -15,14 +16,23 @@ class SpectrogramData {
     required this.centerOfFirstTimeSlice, // t1 or x1
     required this.minFrequencyHz, // ymin or fmin
     required this.maxFrequencyHz, // ymax or fmax
+    required this.numberOfFreqs, // nf
     required this.frequencyStepHz, // df or dy
     required this.centerOfFirstFrequencyBandHz, // y1 or f1
-  });
+  })  : powerSpectrumDensity = List<List<double>>.filled(
+          numberOfFreqs,
+          List<double>.filled(numberOfTimeSlices, 0.0),
+        ),
+        assert(numberOfTimeSlices > 0),
+        assert(numberOfFreqs > 0),
+        assert(timeBetweenTimeSlices > 0),
+        assert(frequencyStepHz > 0);
 
   final double tmin;
   final double tmax;
 
   final int numberOfTimeSlices;
+  final int numberOfFreqs;
 
   final double timeBetweenTimeSlices;
 
@@ -33,10 +43,18 @@ class SpectrogramData {
   final double frequencyStepHz;
   final double centerOfFirstFrequencyBandHz;
 
-  late final List<List<double>> powerSpectrumDensity;
+  final List<List<double>> powerSpectrumDensity;
 
   double get totalDuration => tmax - tmin;
   double get totalBandwidth => maxFrequencyHz - minFrequencyHz;
+
+  double indexToX(int index) {
+    return (centerOfFirstTimeSlice + (index) * timeBetweenTimeSlices);
+  }
+
+  int xToLowIndex(Sound sound, double x) {
+    return ((x - sound.timeOfFirstSample) / sound.samplingPeriod + 1.0).floor();
+  }
 
   static SpectrogramData? fromSound(
     Sound me, {
@@ -48,29 +66,33 @@ class SpectrogramData {
     double maximumTimeOversampling = 8.0,
     double maximumFreqOversampling = 8.0,
   }) {
-    final nyquist = 0.5 / me.samplingPeriod;
-    final physicalAnalysisWidth = (windowType == WindowType.gaussian
+    final double nyquist = 0.5 / me.samplingPeriod;
+    final double physicalAnalysisWidth = (windowType == WindowType.gaussian
         ? 2.0 * effectiveAnalysisWidth
         : effectiveAnalysisWidth);
 
-    final effectiveTimeWidth = effectiveAnalysisWidth / math.sqrt(math.pi);
-    final effectiveFreqWidth = 1.0 / effectiveTimeWidth;
+    final double effectiveTimeWidth =
+        effectiveAnalysisWidth / math.sqrt(math.pi);
+    final double effectiveFreqWidth = 1.0 / effectiveTimeWidth;
 
-    double minimumTimeStep2 = effectiveTimeWidth / maximumTimeOversampling;
-    double minimumFreqStep2 = effectiveFreqWidth / maximumFreqOversampling;
-    double timeStep = math.max(minimumTimeStep1, minimumTimeStep2);
+    final double minimumTimeStep2 =
+        effectiveTimeWidth / maximumTimeOversampling;
+    final double minimumFreqStep2 =
+        effectiveFreqWidth / maximumFreqOversampling;
+
+    final double timeStep = math.max(minimumTimeStep1, minimumTimeStep2);
     double freqStep = math.max(minimumFreqStep1, minimumFreqStep2);
-    // double physicalDuration = my dx * my nx;
-    double physicalDuration = 9999;
+    double physicalDuration = me.samplingPeriod * me.numberOfSamples;
+
     /*
 			Compute the time sampling.
 		*/
-    final approximateNumberOfSamplesPerWindow =
+    final int approximateNumberOfSamplesPerWindow =
         (physicalAnalysisWidth / me.samplingPeriod).floor();
-    final halfnsamp_window = approximateNumberOfSamplesPerWindow / 2 - 1;
-    final nsamp_window = halfnsamp_window * 2;
+    final int halfnsampWindow = approximateNumberOfSamplesPerWindow ~/ 2 - 1;
+    final int nsampWindow = halfnsampWindow * 2;
 
-    if (nsamp_window < 1) {
+    if (nsampWindow < 1) {
       throw Exception(
           "Your analysis window is too short: less than two samples.");
     }
@@ -80,7 +102,7 @@ class SpectrogramData {
           "Your sound is too short: it should be at least as long as ${windowType == WindowType.gaussian ? "two window lengths." : "one window length."}");
     }
 
-    final numberOfTimes = 1 +
+    final int numberOfTimes = 1 +
         ((physicalDuration - physicalAnalysisWidth) / timeStep).floor(); // >= 1
 
     final double t1 = me.timeOfFirstSample +
@@ -96,23 +118,26 @@ class SpectrogramData {
     }
 
     int numberOfFreqs = (fmax / freqStep).floor();
-    if (numberOfFreqs < 1) return null;
+    if (numberOfFreqs < 1) {
+      return null;
+    }
 
     int nsampFFT = 1;
-    while (nsampFFT < nsamp_window ||
+    while (nsampFFT < nsampWindow ||
         nsampFFT < 2 * numberOfFreqs * (nyquist / fmax)) {
       nsampFFT *= 2;
     }
 
-    final half_nsampFFT = nsampFFT / 2;
+    final int halfNsampfft = nsampFFT ~/ 2;
 
     /*
 			Compute the frequency sampling of the spectrogram.
 		*/
-    int binWidth_samples =
+    int binwidthSamples =
         math.max(1, (freqStep * me.samplingPeriod * nsampFFT).floor());
-    double binWidth_hertz = 1.0 / (me.samplingPeriod * nsampFFT);
-    freqStep = binWidth_samples * binWidth_hertz;
+    double binwidthHertz = 1.0 / (me.samplingPeriod * nsampFFT);
+    freqStep = binwidthSamples * binwidthHertz;
+
     numberOfFreqs = (fmax / freqStep).floor();
     if (numberOfFreqs < 1) {
       return null;
@@ -126,21 +151,27 @@ class SpectrogramData {
       centerOfFirstTimeSlice: t1,
       minFrequencyHz: 0.0,
       maxFrequencyHz: fmax,
-      centerOfFirstFrequencyBandHz: 0.5 * (freqStep - binWidth_hertz),
+      numberOfFreqs: numberOfFreqs,
+      centerOfFirstFrequencyBandHz: 0.5 * (freqStep - binwidthHertz),
       frequencyStepHz: freqStep,
     );
 
     // List<double>.generate(nsamp_window.toInt(), (index) => 0.0);
-    final window = Float64List(nsamp_window.toInt());
+    final window = Float64List(nsampWindow);
+
+    for (int i = 0; i < window.length; ++i) {
+      window[i] = 0.0;
+    }
+
+    final double edge = math.exp(-12.0); // used for Gaussian
 
     double windowssq = 0.0;
-    for (int i = 0; i < nsamp_window; ++i) {
+    for (int i = 0; i < nsampWindow; ++i) {
       final nSamplesPerWindowF = physicalAnalysisWidth / me.samplingPeriod;
 
       switch (windowType) {
         default:
-          final double imid = 0.5 * (nsamp_window + 1);
-          final double edge = math.exp(-12.0);
+          final double imid = 0.5 * (nsampWindow + 1);
           final double phase =
               (i.toDouble() - imid) / nSamplesPerWindowF; // -0.5 .. +0.5
           window[i] = (math.exp(-48.0 * phase * phase) - edge) / (1.0 - edge);
@@ -148,46 +179,64 @@ class SpectrogramData {
       }
       windowssq += window[i] * window[i];
     }
-    final double oneByBinWidth = 1.0 / windowssq / binWidth_samples;
+    final double oneByBinWidth = 1.0 / windowssq / binwidthSamples;
+
+    final data = List<double>.filled(nsampFFT, 0.0);
+    final spectrum = List<double>.filled(halfNsampfft + 1, 0.0);
+
+    final fftTable = FFTTable(n: nsampFFT);
+    fftTable.init();
 
     debugPrint("Sound to Spectrogram...");
 
-    final STFT stft = STFT(
-      nsamp_window.toInt(),
-      window,
-    );
+    for (int iframe = 0; iframe < numberOfTimes; ++iframe) {
+      final t = thee.indexToX(iframe);
+      final int leftSample = thee.xToLowIndex(me, t);
+      final int rightSample = leftSample + 1;
+      final int startSample = rightSample - halfnsampWindow;
+      final int endSample = leftSample + halfnsampWindow;
 
-    final fftResult = <Float64List>[];
-    final spectrum = List<double>.filled(half_nsampFFT.toInt() + 1, 0.0);
-    int currentFrame = 0;
-    thee.powerSpectrumDensity = List<List<double>>.filled(
-      numberOfFreqs,
-      List<double>.filled(me.amplitude.length, 0.0),
-    );
-    stft.run(
-      me.amplitude,
-      (chunk) {
-        Float64List amplitudes = chunk.discardConjugates().magnitudes();
+      assert(startSample >= 1);
+      assert(endSample <= me.numberOfSamples);
 
-        /*
-          Binning
-        */
-        for (int iframe = 0; iframe < chunk.length; ++iframe) {
-          for (int iband = 0; iband < numberOfFreqs; ++iband) {
-            final int lowerSample = (iband - 1) * binWidth_samples + 1;
-            final int higherSample = lowerSample + binWidth_samples;
+      // spectrum.all()  << =  0.0;
 
-            final part = spectrum.sublist(lowerSample, higherSample);
-            final power = pairwiseSum(part);
-
-            thee.powerSpectrumDensity[iband][currentFrame + iframe] =
-                power * oneByBinWidth;
-          }
+      for (int channel = 0; channel < me.numberOfChannels; ++channel) {
+        for (int j = 0, i = startSample; j < nsampWindow; j++) {
+          data[j] = me.amplitude[i++] * window[j];
+        }
+        for (int j = nsampWindow; j < nsampFFT; j++) {
+          data[j] = 0.0;
         }
 
-        fftResult.add(amplitudes);
-      },
-    );
+        debugPrint(
+          "${iframe / (numberOfTimes + 1.0)} Sound to Spectrogram: analysis of frame $iframe out of $numberOfTimes",
+        );
+
+        fftTable.forward(data);
+
+        spectrum[0] += data[0] * data[0];
+        for (int i = 1; i < halfNsampfft; ++i) {
+          final first = data[i + i - 1];
+          final second = data[i + i];
+          spectrum[i] += first * first + second * second;
+        }
+
+        final d = data[nsampFFT - 1];
+        spectrum[halfNsampfft] += d * d; // Nyquist frequency. Correct??
+      }
+
+      for (int iband = 0; iband < numberOfFreqs; ++iband) {
+        final int lowerSample = (iband) * binwidthSamples + 1;
+        final int higherSample = lowerSample + binwidthSamples;
+
+        final double power =
+            pairwiseSum(spectrum.sublist(lowerSample, higherSample));
+
+        thee.powerSpectrumDensity[iband][iframe] = power * oneByBinWidth;
+        // thy z [iband] [iframe] = power * oneByBinWidth;
+      }
+    }
 
     return thee;
   }
@@ -229,4 +278,9 @@ class SpectrogramData {
     }
     return sum;
   }
+}
+
+double NUMsum(List<double> data) {
+  final double sum = 0.0;
+  return sum.toDouble();
 }
