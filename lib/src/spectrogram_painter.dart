@@ -47,20 +47,48 @@ class SpectrogramPainter extends CustomPainter {
     // canvas.rotate(-math.pi);
     // canvas.translate(-size.width * 0.5, -size.height * 0.5);
 
-    for (var j = 0; j < _numYDivisions; j++) {
+    final points = <Offset>[];
+
+    // x is technically time
+    // y is technically frequency
+    for (int y = 0; y < _numYDivisions; ++y) {
+      for (int x = 0; x < _numXDivisions; ++x) {
+        final intensity = data[x][y];
+
+        final xx = x * cellWidth;
+        final yy = y * cellHeight;
+
+        double sy = intensity * height;
+
+        points.add(Offset(xx, sy));
+      }
+    }
+
+    canvas.drawPoints(
+      ui.PointMode.points,
+      points,
+      Paint()
+        ..color = dominantColor
+        ..strokeWidth = 5
+        ..imageFilter = ui.ImageFilter.blur(
+          sigmaX: 0.5,
+          sigmaY: 0.5,
+        ),
+    );
+    /*for (var j = 0; j < _numYDivisions; j++) {
       for (var i = 0; i < _numXDivisions; i++) {
         final intensity = data[i][j];
         final x = i * cellWidth;
         final y = j * cellHeight;
 
-        final neighbour = getNeighborValues(
+        /*final neighbour = getNeighborValues(
           i,
           j,
           _numXDivisions,
           _numYDivisions,
-        );
+        );*/
         // Adjust the smoothing factor as needed
-        final smoothValue = (intensity + neighbour) / 9.0;
+        final smoothValue = (intensity) / 9.0;
 
         double sy = y + (1.0 - smoothValue) * cellHeight;
         double ey = y + cellHeight;
@@ -81,7 +109,7 @@ class SpectrogramPainter extends CustomPainter {
         final paint = Paint()..color = dominantColor;
         canvas.drawRect(smoothRect, paint);
       }
-    }
+    }*/
 
     // .toImage(size.width.floor(), size.height.floor());
     final picture = recorder.endRecording();

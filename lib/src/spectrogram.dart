@@ -98,14 +98,21 @@ class _SpectrogramState extends State<Spectrogram> {
     if (_isProcessing && _data.isEmpty) {
       return widget.loadingBuilder(context);
     }
-    return RepaintBoundary(
-      child: CustomPaint(
-        size: Size(widget.width, widget.height),
-        isComplex: true,
-        painter: SpectrogramPainter(
-          data: _data,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('5000 Hz'),
+        RepaintBoundary(
+          child: CustomPaint(
+            size: Size(widget.width, widget.height),
+            isComplex: true,
+            painter: SpectrogramPainter(
+              data: _data,
+            ),
+          ),
         ),
-      ),
+        const Text('0 Hz'),
+      ],
     );
   }
 }
