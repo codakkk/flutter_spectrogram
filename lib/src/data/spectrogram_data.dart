@@ -115,6 +115,14 @@ class SpectrogramData {
     return (iymax - iymin + 1, iymin, iymax);
   }
 
+  double columnToX(double column) {
+    return centerOfFirstTimeSlice + (column - 1.0) * timeBetweenTimeSlices;
+  }
+
+  double rowToY(double row) {
+    return centerOfFirstFrequencyBandHz + (row - 1.0) * frequencyStepHz;
+  }
+
   static SpectrogramData? fromSound(
     Sound me, {
     double effectiveAnalysisWidth = 0.005,

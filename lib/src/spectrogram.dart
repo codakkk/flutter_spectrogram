@@ -13,6 +13,7 @@ import 'window_type.dart';
 class Spectrogram extends StatefulWidget {
   const Spectrogram({
     super.key,
+    required this.path,
     required this.width,
     required this.height,
     required this.samples,
@@ -25,6 +26,7 @@ class Spectrogram extends StatefulWidget {
     this.processChunk,
   });
 
+  final String path;
   final double width;
   final double height;
 
@@ -66,7 +68,7 @@ class _SpectrogramState extends State<Spectrogram> {
       _isProcessing = true;
     });
 
-    final file = await Wav.readFile('assets/IT_CLD_02S06.wav');
+    final file = await Wav.readFile(widget.path);
     final mono = file.toMono();
 
     final channels = file.channels.length;
@@ -110,10 +112,16 @@ class _SpectrogramState extends State<Spectrogram> {
             size: Size(widget.width, widget.height),
             isComplex: true,
             painter: SpectrogramPainter(
+              dominantColor: Colors.white,
               tmin: 0.0,
               tmax: 0.0,
               fmin: 0.0,
               fmax: 0.0,
+              autoscaling: true,
+              preemphasis: 60.0,
+              maximum: 100.0,
+              dynamic: 50.0,
+              dynamicCompression: 0.0,
               data: _data,
             ),
           ),
