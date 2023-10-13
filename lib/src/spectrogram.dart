@@ -2,9 +2,12 @@ import 'dart:typed_data';
 
 import 'package:fftea/fftea.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_spectrogram/src/data/spectrogram_data.dart';
 import 'package:flutter_spectrogram/src/spectrogram_options.dart';
 import 'package:flutter_spectrogram/src/spectrogram_painter.dart';
+import 'package:wav/wav.dart';
 
+import 'data/sound.dart';
 import 'window_type.dart';
 
 class Spectrogram extends StatefulWidget {
@@ -39,18 +42,11 @@ class Spectrogram extends StatefulWidget {
 class _SpectrogramState extends State<Spectrogram> {
   bool _isProcessing = true;
 
-  List<Float64List> _data = [];
-
-  late final STFT _stft;
+  late final SpectrogramData _data;
 
   @override
   void initState() {
     super.initState();
-
-    _stft = STFT(
-      widget.options.chunkSize,
-      widget.options.windowType.apply(widget.options.chunkSize),
-    );
 
     _processSamples();
   }
@@ -65,37 +61,44 @@ class _SpectrogramState extends State<Spectrogram> {
     }
   }
 
-  void _processSamples() {
+  Future<void> _processSamples() async {
     setState(() {
       _isProcessing = true;
     });
 
-    final newData = <Float64List>[];
+    final file = await Wav.readFile('assets/IT_CLD_02S06.wav');
+    final mono = file.toMono();
 
-    _stft.run(
-      widget.samples,
-      (Float64x2List chunk) {
-        Float64List amplitudes = chunk.discardConjugates().magnitudes();
+    final channels = file.channels.length;
+    final sampleRate = file.samplesPerSecond;
+    final duration = mono.length / sampleRate;
 
-        final processFunc = widget.processChunk;
-        if (processFunc != null) {
-          amplitudes = processFunc(amplitudes);
-        }
+    if (mono.isEmpty) {
+      throw Exception('Audio file contains 0 samples');
+    }
 
-        newData.add(amplitudes);
-      },
-      widget.options.chunkStride,
+    final sound = Sound(
+      numberOfChannels: file.channels.length,
+      xmin: 0.0,
+      xmax: duration,
+      numberOfSamples: (duration * sampleRate).round(),
+      samplingPeriod: 1.0 / sampleRate,
+      timeOfFirstSample: 0.5 / sampleRate,
+      ymax: 0,
+      amplitude: mono,
     );
+
+    final spectrogram = SpectrogramData.fromSound(sound);
 
     setState(() {
       _isProcessing = false;
-      _data = newData;
+      _data = spectrogram!;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isProcessing && _data.isEmpty) {
+    if (_isProcessing) {
       return widget.loadingBuilder(context);
     }
     return Column(
@@ -107,6 +110,10 @@ class _SpectrogramState extends State<Spectrogram> {
             size: Size(widget.width, widget.height),
             isComplex: true,
             painter: SpectrogramPainter(
+              tmin: 0.0,
+              tmax: 0.0,
+              fmin: 0.0,
+              fmax: 0.0,
               data: _data,
             ),
           ),

@@ -11,18 +11,18 @@ class ListWithOffset<T> {
   final List<T> original;
   final int offset;
 
-  T operator [](int index) => original[index];
-  void operator []=(int index, T value) => original[index] = value;
+  T operator [](int index) => original[offset + index];
+  void operator []=(int index, T value) => original[offset + index] = value;
 
   int get length => original.length;
 
-  ListWithOffset<T> toListWithOffset(int newOffset) {
-    return ListWithOffset(original: original, offset: newOffset);
+  ListWithOffset<T> toOffset(int newOffset) {
+    return ListWithOffset(original: original, offset: offset + newOffset);
   }
 }
 
-extension on List<double> {
-  ListWithOffset<double> toListWithOffset(int offset) {
+extension ListWithOffsetX on List<double> {
+  ListWithOffset<double> offset(int offset) {
     return ListWithOffset(original: this, offset: offset);
   }
 }
@@ -49,18 +49,18 @@ class FFTTable {
 
     assert(n == data.length);
 
-    drftf1(n, data, trigcache, trigcache.toListWithOffset(n), splitcache);
+    drftf1(n, data, trigcache, trigcache.offset(n), splitcache);
   }
 }
 
 // wsave & ifac should be pointers (?)
 // ignore: non_constant_identifier_names
-void NUMrffti(int n, List<double> wa, List<int> ifac) {
+void NUMrffti(int n, List<double> wsave, List<int> ifac) {
   if (n == 1) {
     return;
   }
 
-  drfti1(n, wa.toListWithOffset(n), ifac);
+  drfti1(n, wsave.offset(n), ifac);
 }
 
 // wsave & ifac should be pointers (?)
@@ -68,79 +68,56 @@ const List<int> ntryh = [4, 2, 3, 5];
 const double tpi = 6.28318530717958647692528676655900577;
 
 void drfti1(int n, ListWithOffset<double> wa, List<int> ifac) {
-  const List<int> ntryh = [4, 2, 3, 5];
-  const double tpi = 6.28318530717958647692528676655900577;
-  int ntry = 0;
-  int j = -1;
-  int nl = n;
   int nf = 0;
 
-  while (j < 4) {
-    j++;
-    if (j < 4) {
-      ntry = ntryh[j];
-    } else {
-      ntry += 2;
-    }
-
-    int exitL104 = 0;
-    while (true) {
-      int nq = nl ~/ ntry;
-      int nr = nl - ntry * nq;
-      if (nr != 0) break;
-
+  for (int j = 0; j < 4; j++) {
+    int ntry = ntryh[j];
+    while (n % ntry == 0) {
       nf++;
       ifac[nf + 1] = ntry;
-      nl = nq;
+      n ~/= ntry;
+    }
+  }
 
-      if (ntry != 2 || nf != 1) {
-        for (int i = 1; i < nf; i++) {
-          ifac[i + 2] = ifac[i + 1];
-        }
-        ifac[2] = 2;
+  if (n > 1) {
+    nf++;
+    ifac[nf + 1] = n;
+  }
+
+  ifac[0] = n;
+  ifac[1] = nf;
+
+  if (nf <= 1) {
+    return;
+  }
+
+  double argh = tpi / n;
+  int iss = 0;
+  int nfm1 = nf - 1;
+  int l1 = 1;
+
+  for (int k1 = 0; k1 < nfm1; k1++) {
+    int ip = ifac[k1 + 2];
+    int ld = 0;
+    int l2 = l1 * ip;
+    int ido = n ~/ l2;
+    int ipm = ip - 1;
+
+    for (int j = 0; j < ipm; j++) {
+      ld += l1;
+      int i = iss;
+      double argld = ld * argh;
+      double fi = 0.0;
+
+      for (int ii = 2; ii < ido; ii += 2) {
+        fi += 1.0;
+        double arg = fi * argld;
+        wa[i++] = math.cos(arg);
+        wa[i++] = math.sin(arg);
       }
-      exitL104 = 1;
-      break;
+      iss += ido;
     }
-    if (exitL104 != 0) {
-      continue;
-    }
-
-    if (nl != 1) {
-      ifac[0] = n;
-      ifac[1] = nf;
-      final argh = tpi / n;
-      int iss = 0;
-      int nfm1 = nf - 1;
-      int l1 = 1;
-
-      if (nfm1 == 0) return;
-
-      for (int k1 = 0; k1 < nfm1; k1++) {
-        final ip = ifac[k1 + 2];
-        int ld = 0;
-        final l2 = l1 * ip;
-        final ido = n ~/ l2;
-        final ipm = ip - 1;
-
-        for (j = 0; j < ipm; j++) {
-          ld += l1;
-          int i = iss;
-          var fi = 0.0;
-
-          for (var ii = 2; ii < ido; ii += 2) {
-            fi += 1.0;
-            final arg = fi * ld * argh;
-            wa[i++] = math.cos(arg);
-            wa[i++] = math.sin(arg);
-          }
-
-          iss += ido;
-        }
-        l1 = l2;
-      }
-      return;
-    }
+    l1 = l2;
   }
 }
 
@@ -173,29 +150,63 @@ void drftf1(
         }
         if (na != 0) {
           dradfg(
-              ido, ip, l1, idl1, c, c, c, ch, ch, wa.toListWithOffset(iw - 1));
+            ido,
+            ip,
+            l1,
+            idl1,
+            c,
+            c,
+            c,
+            ch,
+            ch,
+            wa.toOffset(iw - 1),
+          );
           na = 1;
         } else {
           dradfg(
-              ido, ip, l1, idl1, ch, ch, ch, c, c, wa.toListWithOffset(iw - 1));
+            ido,
+            ip,
+            l1,
+            idl1,
+            ch,
+            ch,
+            ch,
+            c,
+            c,
+            wa.toOffset(iw - 1),
+          );
           na = 0;
         }
       } else {
         if (na != 0) {
-          dradf2(ido, l1, c, ch, wa.toListWithOffset(iw - 1));
+          dradf2(ido, l1, c, ch, wa.toOffset(iw - 1));
         } else {
-          dradf2(ido, l1, ch, c, wa.toListWithOffset(iw - 1));
+          dradf2(ido, l1, ch, c, wa.toOffset(iw - 1));
         }
       }
     } else {
       ix2 = iw + ido;
       ix3 = ix2 + ido;
       if (na != 0) {
-        dradf4(ido, l1, ch, c, wa.toListWithOffset(iw - 1),
-            wa.toListWithOffset(ix2 - 1), wa.toListWithOffset(ix3 - 1));
+        dradf4(
+          ido,
+          l1,
+          ch,
+          c,
+          wa.toOffset(iw - 1),
+          wa.toOffset(ix2 - 1),
+          wa.toOffset(ix3 - 1),
+        );
       } else {
-        dradf4(ido, l1, c, ch, wa.toListWithOffset(iw - 1),
-            wa.toListWithOffset(ix2 - 1), wa.toListWithOffset(ix3 - 1));
+        dradf4(
+          ido,
+          l1,
+          c,
+          ch,
+          wa.toOffset(iw - 1),
+          wa.toOffset(ix2 - 1),
+          wa.toOffset(ix3 - 1),
+        );
       }
     }
     l2 = l1;

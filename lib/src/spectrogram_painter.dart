@@ -3,17 +3,26 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_spectrogram/src/data/fft/fft_table.dart';
+import 'package:flutter_spectrogram/src/data/spectrogram_data.dart';
 
 class SpectrogramPainter extends CustomPainter {
   SpectrogramPainter({
+    required this.tmin,
+    required this.tmax,
+    required this.fmin,
+    required this.fmax,
     required this.data,
     this.dominantColor = Colors.white,
-  })  : _numXDivisions = data.length,
-        _numYDivisions = data.isEmpty ? 0 : data[0].length;
+  });
 
-  final List<Float64List> data;
-  final int _numXDivisions;
-  final int _numYDivisions;
+  final double tmin;
+  final double tmax;
+
+  final double fmin;
+  final double fmax;
+
+  final SpectrogramData data;
 
   final Color dominantColor;
 
@@ -24,117 +33,30 @@ class SpectrogramPainter extends CustomPainter {
   // intensity of colors represent amplitude of frequencies
   @override
   void paint(Canvas canvas, Size size) {
-    _renderToBackBuffer(size);
+    final (tmin, tmax) = data.unidirectionalAutowindow(this.tmin, this.tmax);
+    final (fmin, fmax) = data.unidirectionalAutowindowY(this.fmin, this.fmax);
 
-    if (_backBuffer != null) {
-      canvas.drawImage(_backBuffer!, Offset.zero, Paint());
-    }
-  }
+    final dx = data.timeBetweenTimeSlices;
+    final dy = data.frequencyStepHz;
 
-  void _renderToBackBuffer(Size size) {
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
+    final (nt, itmin, itmax) =
+        data.getWindowSamplesX(tmin - 0.49999 * dx, tmax + 0.49999 * dx);
+    final (nf, ifmin, ifmax) =
+        data.getWindowSamplesY(fmin - 0.49999 * dy, fmax + 0.49999 * dy);
 
-    final width = size.width;
-    final height = size.height;
-
-    final cellWidth = width / _numXDivisions;
-    final cellHeight = height / _numYDivisions;
-
-    // Rotate by 180 degrees
-    // This rotation is based on my calculation using fftea package.
-    // canvas.translate(size.width * 0.5, size.height * 0.5);
-    // canvas.rotate(-math.pi);
-    // canvas.translate(-size.width * 0.5, -size.height * 0.5);
-
-    final points = <Offset>[];
-
-    // x is technically time
-    // y is technically frequency
-    for (int y = 0; y < _numYDivisions; ++y) {
-      for (int x = 0; x < _numXDivisions; ++x) {
-        final intensity = data[x][y];
-
-        final xx = x * cellWidth;
-        final yy = y * cellHeight;
-
-        double sy = intensity * height;
-
-        points.add(Offset(xx, sy));
-      }
+    if (nt == 0 || nf == 0) {
+      return;
     }
 
-    canvas.drawPoints(
-      ui.PointMode.points,
-      points,
-      Paint()
-        ..color = dominantColor
-        ..strokeWidth = 5
-        ..imageFilter = ui.ImageFilter.blur(
-          sigmaX: 0.5,
-          sigmaY: 0.5,
-        ),
-    );
-    /*for (var j = 0; j < _numYDivisions; j++) {
-      for (var i = 0; i < _numXDivisions; i++) {
-        final intensity = data[i][j];
-        final x = i * cellWidth;
-        final y = j * cellHeight;
+    // Graphics_setWindow(g, tmin, tmax, fmin, fmax)
 
-        /*final neighbour = getNeighborValues(
-          i,
-          j,
-          _numXDivisions,
-          _numYDivisions,
-        );*/
-        // Adjust the smoothing factor as needed
-        final smoothValue = (intensity) / 9.0;
+    final preemphasisFactorBuffer = List<double>.filled(nf, 0);
+    final dynamicFactorBuffer = List<double>.filled(nt, 0);
 
-        double sy = y + (1.0 - smoothValue) * cellHeight;
-        double ey = y + cellHeight;
-
-        if (sy < 0) {
-          sy = 0;
-        }
-
-        if (ey >= height) {
-          ey = height;
-        }
-
-        final smoothRect = Rect.fromPoints(
-          Offset(x, sy), // Smooth the height of the rectangle
-          Offset(x + cellWidth, ey),
-        );
-
-        final paint = Paint()..color = dominantColor;
-        canvas.drawRect(smoothRect, paint);
-      }
-    }*/
-
-    // .toImage(size.width.floor(), size.height.floor());
-    final picture = recorder.endRecording();
-
-    _backBuffer = picture.toImageSync(size.width.floor(), size.height.floor());
-  }
-
-  double getNeighborValues(
-    int x,
-    int y,
-    int numXDivisions,
-    int numYDivisions,
-  ) {
-    final neighbors = [
-      if (x > 0) data[x - 1][y],
-      if (x < numXDivisions - 1) data[x + 1][y],
-      if (y > 0) data[x][y - 1],
-      if (y < numYDivisions - 1) data[x][y + 1],
-      if (x > 0 && y > 0) data[x - 1][y - 1],
-      if (x > 0 && y < numYDivisions - 1) data[x - 1][y + 1],
-      if (x < numXDivisions - 1 && y > 0) data[x + 1][y - 1],
-      if (x < numXDivisions - 1 && y < numYDivisions - 1) data[x + 1][y + 1],
-    ];
-
-    return neighbors.fold(0.0, (sum, value) => sum + value);
+    ListWithOffset<double> preemphasisFactor =
+        preemphasisFactorBuffer.offset(1 - ifmin);
+    ListWithOffset<double> dynamicFactor =
+        preemphasisFactorBuffer.offset(1 - itmin);
   }
 
   @override

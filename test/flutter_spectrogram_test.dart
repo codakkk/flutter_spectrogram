@@ -30,9 +30,11 @@ void main() {
         amplitude: mono,
       );
 
-      final spectrogram = SpectrogramData.fromSound(sound);
+      final spectrogram = SpectrogramData.fromSound(sound)!;
 
-      debugPrint('test');
+      debugPrint(spectrogram.powerSpectrumDensity.toString());
+
+      debugPrint('ciao');
     },
   );
 }

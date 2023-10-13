@@ -16,7 +16,7 @@ class SpectrogramData {
     required this.centerOfFirstTimeSlice, // t1 or x1
     required this.minFrequencyHz, // ymin or fmin
     required this.maxFrequencyHz, // ymax or fmax
-    required this.numberOfFreqs, // nf
+    required this.numberOfFreqs, // nf or ny
     required this.frequencyStepHz, // df or dy
     required this.centerOfFirstFrequencyBandHz, // y1 or f1
   })  : powerSpectrumDensity = List<List<double>>.filled(
@@ -54,6 +54,65 @@ class SpectrogramData {
 
   int xToLowIndex(Sound sound, double x) {
     return ((x - sound.timeOfFirstSample) / sound.samplingPeriod + 1.0).floor();
+  }
+
+  (double xmin, double xmax) unidirectionalAutowindow(
+      final double xmin, final double xmax) {
+    if (xmin >= xmax) {
+      return (tmin, tmax);
+    }
+
+    return (xmin, xmax);
+  }
+
+  (double ymin, double ymax) unidirectionalAutowindowY(
+      final double ymin, final double ymax) {
+    if (ymin >= ymax) {
+      return (minFrequencyHz, maxFrequencyHz);
+    }
+
+    return (ymin, ymax);
+  }
+
+  (int, int ixmin, int ixmax) getWindowSamplesX(double xmin, double xmax) {
+    int ixmin =
+        1 + ((xmin - centerOfFirstTimeSlice) / timeBetweenTimeSlices).ceil();
+    int ixmax =
+        1 + ((xmax - centerOfFirstTimeSlice) / timeBetweenTimeSlices).floor();
+
+    if (ixmin < 1) {
+      ixmin = 1;
+    }
+    if (ixmax > numberOfTimeSlices) {
+      ixmax = numberOfTimeSlices;
+    }
+    if (ixmin > ixmax) {
+      return (0, ixmin, ixmax);
+    }
+
+    return (ixmax - ixmin + 1, ixmin, ixmax);
+  }
+
+  (int, int ixmin, int ixmax) getWindowSamplesY(
+    double ymin,
+    double ymax,
+  ) {
+    int iymin =
+        1 + ((ymin - centerOfFirstFrequencyBandHz) / frequencyStepHz).ceil();
+    int iymax =
+        1 + ((ymax - centerOfFirstFrequencyBandHz) / frequencyStepHz).floor();
+
+    if (iymin < 1) {
+      iymin = 1;
+    }
+    if (iymax > numberOfFreqs) {
+      iymax = numberOfFreqs;
+    }
+    if (iymin > iymax) {
+      return (0, iymin, iymax);
+    }
+
+    return (iymax - iymin + 1, iymin, iymax);
   }
 
   static SpectrogramData? fromSound(
@@ -200,9 +259,20 @@ class SpectrogramData {
       assert(endSample <= me.numberOfSamples);
 
       // spectrum.all()  << =  0.0;
+      for (int i = 0; i < spectrum.length; ++i) {
+        spectrum[i] = 0.0;
+      }
 
+      /*
+				For multichannel sounds, the power spectrogram should represent the
+				average power in the channels,
+				so that the result for a stereo sound in which the
+				left channel has the same waveform as the right channel,
+				is identical to the result for the corresponding mono (= averaged) sound.
+				Averaging starts by adding up the powers of the channels.
+			*/
       for (int channel = 0; channel < me.numberOfChannels; ++channel) {
-        for (int j = 0, i = startSample; j < nsampWindow; j++) {
+        for (int j = 0, i = startSample - 1; j < nsampWindow; ++j) {
           data[j] = me.amplitude[i++] * window[j];
         }
         for (int j = nsampWindow; j < nsampFFT; j++) {
