@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:fftea/fftea.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spectrogram/src/data/spectrogram_data.dart';
 import 'package:flutter_spectrogram/src/spectrogram_options.dart';
@@ -16,12 +15,11 @@ class Spectrogram extends StatefulWidget {
     required this.path,
     required this.width,
     required this.height,
-    required this.samples,
     required this.loadingBuilder,
     this.options = const SpectrogramOptions(
       chunkSize: 1024,
       chunkStride: 512,
-      windowType: WindowType.hanning,
+      windowType: WindowType.gaussian,
     ),
     this.processChunk,
   });
@@ -31,8 +29,6 @@ class Spectrogram extends StatefulWidget {
   final double height;
 
   final SpectrogramOptions options;
-
-  final List<double> samples;
 
   final Widget Function(BuildContext context) loadingBuilder;
   final Float64List Function(Float64List amplitudes)? processChunk;
@@ -44,7 +40,7 @@ class Spectrogram extends StatefulWidget {
 class _SpectrogramState extends State<Spectrogram> {
   bool _isProcessing = true;
 
-  late final SpectrogramData _data;
+  SpectrogramData? _data;
 
   @override
   void initState() {
@@ -57,8 +53,7 @@ class _SpectrogramState extends State<Spectrogram> {
   void didUpdateWidget(covariant Spectrogram oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (widget.samples != oldWidget.samples ||
-        widget.options != oldWidget.options) {
+    if (widget.options != oldWidget.options) {
       _processSamples();
     }
   }
@@ -71,7 +66,6 @@ class _SpectrogramState extends State<Spectrogram> {
     final file = await Wav.readFile(widget.path);
     final mono = file.toMono();
 
-    final channels = file.channels.length;
     final sampleRate = file.samplesPerSecond;
     final duration = mono.length / sampleRate;
 
@@ -87,7 +81,7 @@ class _SpectrogramState extends State<Spectrogram> {
       samplingPeriod: 1.0 / sampleRate,
       timeOfFirstSample: 0.5 / sampleRate,
       ymax: 0,
-      amplitude: mono,
+      amplitudes: file.channels,
     );
 
     final spectrogram = SpectrogramData.fromSound(sound);
@@ -100,7 +94,7 @@ class _SpectrogramState extends State<Spectrogram> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isProcessing) {
+    if (_isProcessing || _data == null) {
       return widget.loadingBuilder(context);
     }
     return Column(
@@ -118,11 +112,11 @@ class _SpectrogramState extends State<Spectrogram> {
               fmin: 0.0,
               fmax: 0.0,
               autoscaling: true,
-              preemphasis: 60.0,
+              preemphasis: 6.0,
               maximum: 100.0,
               dynamic: 50.0,
               dynamicCompression: 0.0,
-              data: _data,
+              data: _data!,
             ),
           ),
         ),

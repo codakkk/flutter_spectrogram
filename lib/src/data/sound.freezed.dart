@@ -18,15 +18,15 @@ final _privateConstructorUsedError = UnsupportedError(
 mixin _$Sound {
   double get xmin => throw _privateConstructorUsedError; // Seconds
   double get xmax => throw _privateConstructorUsedError; // Seconds
-  int get numberOfSamples => throw _privateConstructorUsedError;
+  int get numberOfSamples => throw _privateConstructorUsedError; // nx
   double get samplingPeriod =>
       throw _privateConstructorUsedError; // Seconds (my dx)
   double get timeOfFirstSample =>
       throw _privateConstructorUsedError; // Seconds (x1)
   int get ymin => throw _privateConstructorUsedError; // Left or only channel
   int get ymax => throw _privateConstructorUsedError; // right or only channels
-  int get numberOfChannels => throw _privateConstructorUsedError;
-  List<double> get amplitude => throw _privateConstructorUsedError;
+  int get numberOfChannels => throw _privateConstructorUsedError; // ny
+  List<Float64List> get amplitudes => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
   $SoundCopyWith<Sound> get copyWith => throw _privateConstructorUsedError;
@@ -46,7 +46,7 @@ abstract class $SoundCopyWith<$Res> {
       int ymin,
       int ymax,
       int numberOfChannels,
-      List<double> amplitude});
+      List<Float64List> amplitudes});
 }
 
 /// @nodoc
@@ -70,7 +70,7 @@ class _$SoundCopyWithImpl<$Res, $Val extends Sound>
     Object? ymin = null,
     Object? ymax = null,
     Object? numberOfChannels = null,
-    Object? amplitude = null,
+    Object? amplitudes = null,
   }) {
     return _then(_value.copyWith(
       xmin: null == xmin
@@ -105,10 +105,10 @@ class _$SoundCopyWithImpl<$Res, $Val extends Sound>
           ? _value.numberOfChannels
           : numberOfChannels // ignore: cast_nullable_to_non_nullable
               as int,
-      amplitude: null == amplitude
-          ? _value.amplitude
-          : amplitude // ignore: cast_nullable_to_non_nullable
-              as List<double>,
+      amplitudes: null == amplitudes
+          ? _value.amplitudes
+          : amplitudes // ignore: cast_nullable_to_non_nullable
+              as List<Float64List>,
     ) as $Val);
   }
 }
@@ -129,7 +129,7 @@ abstract class _$$SoundImplCopyWith<$Res> implements $SoundCopyWith<$Res> {
       int ymin,
       int ymax,
       int numberOfChannels,
-      List<double> amplitude});
+      List<Float64List> amplitudes});
 }
 
 /// @nodoc
@@ -151,7 +151,7 @@ class __$$SoundImplCopyWithImpl<$Res>
     Object? ymin = null,
     Object? ymax = null,
     Object? numberOfChannels = null,
-    Object? amplitude = null,
+    Object? amplitudes = null,
   }) {
     return _then(_$SoundImpl(
       xmin: null == xmin
@@ -186,10 +186,10 @@ class __$$SoundImplCopyWithImpl<$Res>
           ? _value.numberOfChannels
           : numberOfChannels // ignore: cast_nullable_to_non_nullable
               as int,
-      amplitude: null == amplitude
-          ? _value._amplitude
-          : amplitude // ignore: cast_nullable_to_non_nullable
-              as List<double>,
+      amplitudes: null == amplitudes
+          ? _value._amplitudes
+          : amplitudes // ignore: cast_nullable_to_non_nullable
+              as List<Float64List>,
     ));
   }
 }
@@ -206,8 +206,8 @@ class _$SoundImpl implements _Sound {
       this.ymin = 1,
       required this.ymax,
       required this.numberOfChannels,
-      required final List<double> amplitude})
-      : _amplitude = amplitude;
+      required final List<Float64List> amplitudes})
+      : _amplitudes = amplitudes;
 
   @override
   final double xmin;
@@ -217,6 +217,7 @@ class _$SoundImpl implements _Sound {
 // Seconds
   @override
   final int numberOfSamples;
+// nx
   @override
   final double samplingPeriod;
 // Seconds (my dx)
@@ -232,17 +233,19 @@ class _$SoundImpl implements _Sound {
 // right or only channels
   @override
   final int numberOfChannels;
-  final List<double> _amplitude;
+// ny
+  final List<Float64List> _amplitudes;
+// ny
   @override
-  List<double> get amplitude {
-    if (_amplitude is EqualUnmodifiableListView) return _amplitude;
+  List<Float64List> get amplitudes {
+    if (_amplitudes is EqualUnmodifiableListView) return _amplitudes;
     // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_amplitude);
+    return EqualUnmodifiableListView(_amplitudes);
   }
 
   @override
   String toString() {
-    return 'Sound(xmin: $xmin, xmax: $xmax, numberOfSamples: $numberOfSamples, samplingPeriod: $samplingPeriod, timeOfFirstSample: $timeOfFirstSample, ymin: $ymin, ymax: $ymax, numberOfChannels: $numberOfChannels, amplitude: $amplitude)';
+    return 'Sound(xmin: $xmin, xmax: $xmax, numberOfSamples: $numberOfSamples, samplingPeriod: $samplingPeriod, timeOfFirstSample: $timeOfFirstSample, ymin: $ymin, ymax: $ymax, numberOfChannels: $numberOfChannels, amplitudes: $amplitudes)';
   }
 
   @override
@@ -263,7 +266,7 @@ class _$SoundImpl implements _Sound {
             (identical(other.numberOfChannels, numberOfChannels) ||
                 other.numberOfChannels == numberOfChannels) &&
             const DeepCollectionEquality()
-                .equals(other._amplitude, _amplitude));
+                .equals(other._amplitudes, _amplitudes));
   }
 
   @override
@@ -277,7 +280,7 @@ class _$SoundImpl implements _Sound {
       ymin,
       ymax,
       numberOfChannels,
-      const DeepCollectionEquality().hash(_amplitude));
+      const DeepCollectionEquality().hash(_amplitudes));
 
   @JsonKey(ignore: true)
   @override
@@ -296,7 +299,7 @@ abstract class _Sound implements Sound {
       final int ymin,
       required final int ymax,
       required final int numberOfChannels,
-      required final List<double> amplitude}) = _$SoundImpl;
+      required final List<Float64List> amplitudes}) = _$SoundImpl;
 
   @override
   double get xmin;
@@ -304,7 +307,7 @@ abstract class _Sound implements Sound {
   double get xmax;
   @override // Seconds
   int get numberOfSamples;
-  @override
+  @override // nx
   double get samplingPeriod;
   @override // Seconds (my dx)
   double get timeOfFirstSample;
@@ -314,8 +317,8 @@ abstract class _Sound implements Sound {
   int get ymax;
   @override // right or only channels
   int get numberOfChannels;
-  @override
-  List<double> get amplitude;
+  @override // ny
+  List<Float64List> get amplitudes;
   @override
   @JsonKey(ignore: true)
   _$$SoundImplCopyWith<_$SoundImpl> get copyWith =>

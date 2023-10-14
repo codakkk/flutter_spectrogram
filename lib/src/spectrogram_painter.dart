@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:decimal/decimal.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spectrogram/src/data/fft/fft_table.dart';
 import 'package:flutter_spectrogram/src/data/spectrogram_data.dart';
@@ -49,6 +51,7 @@ class SpectrogramPainter extends CustomPainter {
     Spectrogram_paintInside(
       data,
       canvas,
+      size,
       tmin,
       tmax,
       fmin,
@@ -74,6 +77,7 @@ class SpectrogramPainter extends CustomPainter {
 void Spectrogram_paintInside(
   SpectrogramData me,
   Canvas g,
+  Size size,
   double tmin,
   double tmax,
   double fmin,
@@ -105,29 +109,39 @@ void Spectrogram_paintInside(
   final dynamicFactorBuffer = List<double>.filled(nt, 0);
 
   ListWithOffset<double> preemphasisFactor =
-      preemphasisFactorBuffer.offset(1 - ifmin);
+      preemphasisFactorBuffer.offset(1 - (ifmin + 1));
   ListWithOffset<double> dynamicFactor =
-      preemphasisFactorBuffer.offset(1 - itmin);
+      dynamicFactorBuffer.offset(1 - (itmin + 1));
 
+  final d = (String s) => Decimal.parse(s);
+
+  final tvalue = double.parse("1e-30");
+  final t2value = double.parse("4.0e-10");
+
+  final preCalc = preemphasis / NUMln2;
+  const tenPreCalc = 10.0 / NUMln10;
   /* Pre-emphasis in place; also compute maximum after pre-emphasis. */
-  for (int ifreq = ifmin; ifreq < ifmax; ifreq++) {
-    preemphasisFactor[ifreq] =
-        (preemphasis / NUMln2) * math.log(ifreq * dy / 1000.0);
-    for (int itime = itmin; itime < itmax; itime++) {
+  /*for (int ifreq = ifmin; ifreq < ifmax; ++ifreq) {
+    preemphasisFactor[ifreq] = preCalc * math.log((ifreq + 1) * dy / 1000.0);
+    final preemphasisValue = preemphasisFactor[ifreq];
+
+    for (int itime = itmin; itime < itmax; ++itime) {
       double value = me.powerSpectrumDensity[ifreq][itime]; // power
-      value = (10.0 / NUMln10) * math.log((value + 1e-30) / 4.0e-10) +
-          preemphasisFactor[ifreq]; // dB
-      if (value > dynamicFactor[itime - 1]) {
+      final c = tenPreCalc * math.log((value + tvalue) / t2value) +
+          preemphasisValue; // dB
+      if (c > dynamicFactor[itime]) {
         dynamicFactor[itime] = value;
       }
-      me.powerSpectrumDensity[ifreq][itime] = value; // local maximum
+
+      me.powerSpectrumDensity[ifreq][itime] =
+          c.isNaN ? 0.0 : c; // local maximum+
     }
-  }
+  }*/
 
   /* Compute global maximum. */
   if (autoscaling) {
     maximum = 0.0;
-    for (int itime = itmin - 1; itime < itmax; itime++) {
+    for (int itime = itmin; itime < itmax; itime++) {
       if (dynamicFactor[itime] > maximum) {
         maximum = dynamicFactor[itime];
       }
@@ -143,42 +157,234 @@ void Spectrogram_paintInside(
     }
   }
 
+  for (int i = 0; i < greyBrush.length; ++i) {
+    greyBrush[i] = Color.fromARGB(255, i, i, i);
+  }
+
   // Canvas qualcosa
   final thepart = part(me.powerSpectrumDensity, ifmin, ifmax, itmin, itmax);
-  final a = me.columnToX(itmin - 0.5);
-  final b = me.columnToX(itmax + 0.5);
-  final c = me.rowToY(ifmin - 0.5);
-  final d = me.rowToY(ifmax + 0.5);
+  final minX = me.columnToX(itmin - 0.5);
+  final maxX = me.columnToX(itmax + 0.5);
+  final minY = me.rowToY(ifmin - 0.5);
+  final maxY = me.rowToY(ifmax + 0.5);
+
+  Graphics_image(
+    g,
+    thepart,
+    minX,
+    maxX,
+    minY,
+    maxY,
+    maximum - dynamic,
+    maximum,
+  );
+
+  final width = size.width;
+  final height = size.height;
+
+  final _numXDivisions = me.powerSpectrumDensity[0].length;
+  final _numYDivisions = me.powerSpectrumDensity.length;
+
+  final cellWidth = width / _numXDivisions;
+  final cellHeight = height / _numYDivisions;
+
+  // Rotate by 180 degrees
+  // This rotation is based on my calculation using fftea package.
+  // canvas.translate(size.width * 0.5, size.height * 0.5);
+  // canvas.rotate(-math.pi);
+  // canvas.translate(-size.width * 0.5, -size.height * 0.5);
+  double minimum = maximum - dynamic;
+  double scale = 255.0 / (maximum - minimum);
+  double offset = 255.0 + minimum * scale;
+  for (var ifreq = 0; ifreq < _numYDivisions; ifreq++) {
+    for (var itime = 0; itime < _numXDivisions; itime++) {
+      final intensity = me.powerSpectrumDensity[ifreq][itime];
+      final x = itime * cellWidth;
+      final y = ifreq * cellHeight;
+
+      // Adjust the smoothing factor as needed
+      final smoothValue = (intensity) / 9.0;
+
+      double sy = y + (1.0 - smoothValue) * cellHeight;
+      double ey = y + cellHeight;
+
+      if (sy < 0) {
+        sy = 0;
+      }
+
+      if (ey >= height) {
+        ey = height;
+      }
+
+      final smoothRect = Rect.fromPoints(
+        Offset(x, sy), // Smooth the height of the rectangle
+        Offset(x + cellWidth, ey),
+      );
+
+      final paint = Paint()
+        ..color = Color.fromARGB(
+            255, intensity.toInt(), intensity.toInt(), intensity.toInt());
+      g.drawRect(smoothRect, paint);
+    }
+  }
+
+  // Graphics_image
 
   for (int ifreq = ifmin; ifreq < ifmax; ifreq++) {
     for (int itime = itmin; itime < itmax; itime++) {
-      final double value = 4.0e-10 *
+      final double value = double.parse("4.0e-10") *
               math.exp((me.powerSpectrumDensity[ifreq][itime] -
                       dynamicFactor[itime] -
                       preemphasisFactor[ifreq]) *
                   (NUMln10 / 10.0)) -
-          1e-30;
-      me.powerSpectrumDensity[ifreq][itime] = value < 0.0 ? 0.0 : value;
+          double.parse("1e-30");
+      /*me.powerSpectrumDensity[ifreq][itime] =
+          (value.isNaN || value < 0.0) ? 0.0 : value;*/
     }
   }
 }
 
-List<List<double>> part(List<List<double>> our, int firstRow, int lastRow,
-    int firstCol, int lastCol) {
-  int newNrow = lastRow - (firstRow - 1);
-  int newNcol = lastCol - (firstCol - 1);
+final greyBrush = List.filled(256, Colors.white);
+
+// Those are zoom and movement
+const scaleX = 1;
+const deltaX = 1;
+const scaleY = 1;
+const deltaY = 1;
+
+int wdx(double x) => (x * scaleX + deltaX).toInt();
+int wdy(double y) => (y * scaleY + deltaY).toInt();
+
+void Graphics_image(
+  Canvas canvas,
+  List<List<double>> z,
+  double x1WC,
+  double x2WC,
+  double y1WC,
+  double y2WC,
+  double minimum,
+  double maximum,
+) {
+  // Some checks on z
+
+  _cellArrayOrImage(
+    canvas,
+    z,
+    1,
+    z[0].length,
+    wdx(x1WC),
+    wdx(x2WC),
+    1,
+    z.length,
+    wdy(y1WC),
+    wdy(y2WC),
+    minimum,
+    maximum,
+    0, // wdx(my d_x1WC)
+    1, // wdx(my d_x2WC)
+    0, // wdy(my d_y1WC)
+    1, // wdy(my d_y2WC)
+    true,
+  );
+}
+
+void _cellArrayOrImage(
+  Canvas canvas,
+  List<List<double>> z,
+  int ix1,
+  int ix2,
+  int x1DC,
+  int x2DC,
+  int iy1,
+  int iy2,
+  int y1DC,
+  int y2DC,
+  double minimum,
+  double maximum,
+  int clipx1,
+  int clipx2,
+  int clipy1,
+  int clipy2,
+  bool interpoalte,
+) {
+  int nx = ix2 - ix1;
+  int ny = iy2 - iy1;
+  double dx = (x2DC - x1DC) / nx.toDouble();
+  double dy = (y2DC - y1DC) / ny.toDouble();
+  double scale = 255.0 / (maximum - minimum);
+  double offset = 255.0 + minimum * scale;
+
+  if (x2DC <= x1DC || y1DC <= y2DC) return;
+
+  if (clipx1 < x1DC) clipx1 = x1DC;
+  if (clipx2 > x2DC) clipx2 = x2DC;
+  if (clipy1 > y1DC) clipy1 = y1DC;
+  if (clipy2 < y2DC) clipy2 = y2DC;
+
+  for (int yDC = clipy2; yDC < clipy1; yDC++) {
+    for (int xDC = clipx1; xDC < clipx2; xDC++) {
+      double ixReal = ix1 - 0.5 + (nx * (xDC - x1DC)) / (x2DC - x1DC);
+      int ileft = ixReal.floor();
+      int iright = ileft + 1;
+      double rightWeight = ixReal - ileft;
+      double leftWeight = 1.0 - rightWeight;
+
+      if (ileft < ix1) ileft = ix1;
+      if (iright > ix2) iright = ix2;
+
+      double iyReal = iy2 + 0.5 - (ny * (yDC - y2DC)) / (y1DC - y2DC);
+      int itop = iyReal.ceil();
+      int ibottom = itop - 1;
+      double bottomWeight = itop - iyReal;
+      double topWeight = 1.0 - bottomWeight;
+
+      List<double> ztop = z[itop];
+      List<double> zbottom = z[ibottom];
+      Color pixelColor;
+
+      for (int x = clipx1; x < clipx2; x++) {
+        double interpol = rightWeight *
+                (topWeight * ztop[iright] + bottomWeight * zbottom[iright]) +
+            leftWeight *
+                (topWeight * ztop[ileft] + bottomWeight * zbottom[ileft]);
+        double value = offset - scale * interpol;
+
+        // Convert the value to a color based on your logic.
+        int c = (255 * value).toInt();
+        pixelColor = Color.fromARGB(255, c, c, c);
+
+        // Draw the pixel on the canvas.
+        canvas.drawRect(
+          Rect.fromPoints(Offset(x.toDouble(), yDC.toDouble()),
+              Offset(x.toDouble() + 1.0, yDC.toDouble() + 1.0)),
+          Paint()..color = pixelColor,
+        );
+      }
+    }
+  }
+}
+
+List<List<double>> part(
+  List<List<double>> our,
+  int firstRow,
+  int lastRow,
+  int firstCol,
+  int lastCol,
+) {
+  int newNrow = lastRow - firstRow;
+  int newNcol = lastCol - firstCol;
 
   if (newNrow <= 0 || newNcol <= 0) {
     return [];
   }
 
-  assert(firstRow >= 1 && firstRow <= our.length);
-  assert(lastRow >= 1 && lastRow <= our.length);
-  assert(firstCol >= 1 && firstCol <= our[0].length);
-  assert(lastCol >= 1 && lastCol <= our[0].length);
+  assert(firstRow >= 0 && firstRow <= our.length);
+  assert(lastRow >= 0 && lastRow <= our.length);
+  assert(firstCol >= 0 && firstCol <= our[0].length);
+  assert(lastCol >= 0 && lastCol <= our[0].length);
 
   return our
-      .sublist(firstRow - 1, firstRow - 1 + newNrow)
-      .map((row) => row.sublist(firstCol - 1, firstCol - 1 + newNcol))
+      .sublist(firstRow, firstRow + newNrow)
+      .map((row) => row.sublist(firstCol, firstCol + newNcol))
       .toList();
 }

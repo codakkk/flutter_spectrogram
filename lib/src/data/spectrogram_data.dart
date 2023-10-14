@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:fftea/fftea.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_spectrogram/flutter_spectrogram.dart';
@@ -76,12 +78,12 @@ class SpectrogramData {
 
   (int, int ixmin, int ixmax) getWindowSamplesX(double xmin, double xmax) {
     int ixmin =
-        1 + ((xmin - centerOfFirstTimeSlice) / timeBetweenTimeSlices).ceil();
+        ((xmin - centerOfFirstTimeSlice) / timeBetweenTimeSlices).ceil();
     int ixmax =
-        1 + ((xmax - centerOfFirstTimeSlice) / timeBetweenTimeSlices).floor();
+        ((xmax - centerOfFirstTimeSlice) / timeBetweenTimeSlices).floor();
 
-    if (ixmin < 1) {
-      ixmin = 1;
+    if (ixmin < 0) {
+      ixmin = 0;
     }
     if (ixmax > numberOfTimeSlices) {
       ixmax = numberOfTimeSlices;
@@ -98,12 +100,12 @@ class SpectrogramData {
     double ymax,
   ) {
     int iymin =
-        1 + ((ymin - centerOfFirstFrequencyBandHz) / frequencyStepHz).ceil();
+        ((ymin - centerOfFirstFrequencyBandHz) / frequencyStepHz).ceil();
     int iymax =
-        1 + ((ymax - centerOfFirstFrequencyBandHz) / frequencyStepHz).floor();
+        ((ymax - centerOfFirstFrequencyBandHz) / frequencyStepHz).floor();
 
-    if (iymin < 1) {
-      iymin = 1;
+    if (iymin < 0) {
+      iymin = 0;
     }
     if (iymax > numberOfFreqs) {
       iymax = numberOfFreqs;
@@ -251,6 +253,8 @@ class SpectrogramData {
     final data = List<double>.filled(nsampFFT, 0.0);
     final spectrum = List<double>.filled(halfNsampfft + 1, 0.0);
 
+    final fft = FFT(nsampFFT);
+
     final fftTable = FFTTable(n: nsampFFT);
     fftTable.init();
 
@@ -281,29 +285,39 @@ class SpectrogramData {
 			*/
       for (int channel = 0; channel < me.numberOfChannels; ++channel) {
         for (int j = 0, i = startSample - 1; j < nsampWindow; ++j) {
-          data[j] = me.amplitude[i++] * window[j];
+          data[j] = me.amplitudes[channel][i++] * window[j];
         }
+
         for (int j = nsampWindow; j < nsampFFT; j++) {
           data[j] = 0.0;
         }
 
-        debugPrint(
+        /*debugPrint(
           "${iframe / (numberOfTimes + 1.0)} Sound to Spectrogram: analysis of frame $iframe out of $numberOfTimes",
-        );
+        );*/
 
+        final deta = fft.realFft(data).discardConjugates();
         fftTable.forward(data);
 
-        spectrum[0] += data[0] * data[0];
+        spectrum[0] += deta[0].x * deta[0].x;
+        final squareMagnitudes = deta.squareMagnitudes();
         for (int i = 1; i < halfNsampfft; ++i) {
+          spectrum[i] = squareMagnitudes[i];
+        }
+
+        //  ^
+        // This code is equivalent to squareMagnitudes()
+        /*for (int i = 1; i < halfNsampfft; ++i) {
           final first = data[i + i - 1];
           final second = data[i + i];
           spectrum[i] += first * first + second * second;
-        }
+        }*/
 
-        final d = data[nsampFFT - 1];
+        final d = deta.last.x; // data[nsampFFT - 1]
         spectrum[halfNsampfft] += d * d; // Nyquist frequency. Correct??
       }
 
+      // Binning.
       for (int iband = 0; iband < numberOfFreqs; ++iband) {
         final int lowerSample = (iband) * binwidthSamples + 1;
         final int higherSample = lowerSample + binwidthSamples;

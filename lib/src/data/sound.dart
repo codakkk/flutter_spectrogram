@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'sound.freezed.dart';
@@ -12,8 +14,8 @@ class Sound with _$Sound {
     required double timeOfFirstSample, // Seconds (x1)
     @Default(1) int ymin, // Left or only channel
     required int ymax, // right or only channels
-    required int numberOfChannels,
-    required List<double> amplitude, // z
+    required int numberOfChannels, // ny
+    required List<Float64List> amplitudes, // z
     // List of List<double> because it's based on multiple channels. We usally expect a mono sound
   }) = _Sound;
 }

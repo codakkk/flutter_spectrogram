@@ -1,7 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
-
 class ListWithOffset<T> {
   ListWithOffset({
     required this.original,
@@ -38,8 +36,6 @@ class FFTTable {
 
   void init() {
     NUMrffti(n, trigcache, splitcache);
-
-    debugPrint('test');
   }
 
   void forward(List<double> data) {
