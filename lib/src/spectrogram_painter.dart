@@ -1,13 +1,14 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
-
-import 'package:decimal/decimal.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spectrogram/src/data/fft/fft_table.dart';
 import 'package:flutter_spectrogram/src/data/spectrogram_data.dart';
+import 'package:flutter_spectrogram/src/log_utils.dart';
 
+// ignore: constant_identifier_names
 const double NUMln2 = 0.6931471805599453094172321214581765680755;
+// ignore: constant_identifier_names
 const double NUMln10 = 2.3025850929940456840179914546843642076011;
 
 class SpectrogramPainter extends CustomPainter {
@@ -88,6 +89,7 @@ void Spectrogram_paintInside(
   double preemphasis,
   double dynamicCompression,
 ) {
+  debugPrint('run Spectrogram_paintInside');
   final (ttmin, ttmax) = me.unidirectionalAutowindow(tmin, tmax);
   final (ffmin, ffmax) = me.unidirectionalAutowindowY(fmin, fmax);
 
@@ -105,55 +107,56 @@ void Spectrogram_paintInside(
 
   // Graphics_setWindow(g, ttmin, ttmax, ffmin, ffmax)
 
-  final preemphasisFactorBuffer = List<double>.filled(nf, 0);
-  final dynamicFactorBuffer = List<double>.filled(nt, 0);
-
-  ListWithOffset<double> preemphasisFactor =
-      preemphasisFactorBuffer.offset(1 - (ifmin + 1));
-  ListWithOffset<double> dynamicFactor =
-      dynamicFactorBuffer.offset(1 - (itmin + 1));
-
-  final d = (String s) => Decimal.parse(s);
+  final preemphasisFactorBuffer = Float64List(nf);
+  final dynamicFactorBuffer = Float64List(nt);
 
   final tvalue = double.parse("1e-30");
   final t2value = double.parse("4.0e-10");
 
   final preCalc = preemphasis / NUMln2;
-  const tenPreCalc = 10.0 / NUMln10;
+
   /* Pre-emphasis in place; also compute maximum after pre-emphasis. */
-  /*for (int ifreq = ifmin; ifreq < ifmax; ++ifreq) {
-    preemphasisFactor[ifreq] = preCalc * math.log((ifreq + 1) * dy / 1000.0);
-    final preemphasisValue = preemphasisFactor[ifreq];
+  for (int ifreq = ifmin; ifreq < ifmax; ++ifreq) {
+    final preemphasisValue = preCalc * math.log((ifreq + 1) * dy / 1000.0);
+    preemphasisFactorBuffer[ifreq] = preemphasisValue;
 
     for (int itime = itmin; itime < itmax; ++itime) {
       double value = me.powerSpectrumDensity[ifreq][itime]; // power
-      final c = tenPreCalc * math.log((value + tvalue) / t2value) +
+
+      final c = 10.0 * LogUtils.log10((value + tvalue) / t2value) +
           preemphasisValue; // dB
-      if (c > dynamicFactor[itime]) {
-        dynamicFactor[itime] = value;
+
+      if (c > dynamicFactorBuffer[itime]) {
+        dynamicFactorBuffer[itime] = value;
+      }
+
+      final zz = me.powerSpectrumDensity[0][0];
+      debugPrint('0:0: $zz');
+      if (c > 128) {
+        debugPrint('we');
       }
 
       me.powerSpectrumDensity[ifreq][itime] =
           c.isNaN ? 0.0 : c; // local maximum+
     }
-  }*/
+  }
 
   /* Compute global maximum. */
   if (autoscaling) {
     maximum = 0.0;
     for (int itime = itmin; itime < itmax; itime++) {
-      if (dynamicFactor[itime] > maximum) {
-        maximum = dynamicFactor[itime];
+      if (dynamicFactorBuffer[itime] > maximum) {
+        maximum = dynamicFactorBuffer[itime];
       }
     }
   }
 
   /* Dynamic compression in place. */
   for (int itime = itmin; itime < itmax; itime++) {
-    dynamicFactor[itime] =
-        dynamicCompression * (maximum - dynamicFactor[itime]);
+    dynamicFactorBuffer[itime] =
+        dynamicCompression * (maximum - dynamicFactorBuffer[itime]);
     for (int ifreq = ifmin; ifreq < ifmax; ifreq++) {
-      me.powerSpectrumDensity[ifreq][itime] += dynamicFactor[itime];
+      me.powerSpectrumDensity[ifreq][itime] += dynamicFactorBuffer[itime];
     }
   }
 
@@ -223,7 +226,11 @@ void Spectrogram_paintInside(
 
       final paint = Paint()
         ..color = Color.fromARGB(
-            255, intensity.toInt(), intensity.toInt(), intensity.toInt());
+          255,
+          intensity.toInt(),
+          intensity.toInt(),
+          intensity.toInt(),
+        );
       g.drawRect(smoothRect, paint);
     }
   }
@@ -234,12 +241,12 @@ void Spectrogram_paintInside(
     for (int itime = itmin; itime < itmax; itime++) {
       final double value = double.parse("4.0e-10") *
               math.exp((me.powerSpectrumDensity[ifreq][itime] -
-                      dynamicFactor[itime] -
-                      preemphasisFactor[ifreq]) *
+                      dynamicFactorBuffer[itime] -
+                      preemphasisFactorBuffer[ifreq]) *
                   (NUMln10 / 10.0)) -
           double.parse("1e-30");
-      /*me.powerSpectrumDensity[ifreq][itime] =
-          (value.isNaN || value < 0.0) ? 0.0 : value;*/
+      me.powerSpectrumDensity[ifreq][itime] =
+          (value.isNaN || value < 0.0) ? 0.0 : value;
     }
   }
 }

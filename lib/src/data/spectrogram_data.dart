@@ -21,9 +21,9 @@ class SpectrogramData {
     required this.numberOfFreqs, // nf or ny
     required this.frequencyStepHz, // df or dy
     required this.centerOfFirstFrequencyBandHz, // y1 or f1
-  })  : powerSpectrumDensity = List<List<double>>.filled(
+  })  : powerSpectrumDensity = List<Float64List>.filled(
           numberOfFreqs,
-          List<double>.filled(numberOfTimeSlices, 0.0),
+          Float64List(numberOfTimeSlices),
         ),
         assert(numberOfTimeSlices > 0),
         assert(numberOfFreqs > 0),
@@ -45,7 +45,7 @@ class SpectrogramData {
   final double frequencyStepHz;
   final double centerOfFirstFrequencyBandHz;
 
-  final List<List<double>> powerSpectrumDensity;
+  final List<Float64List> powerSpectrumDensity;
 
   double get totalDuration => tmax - tmin;
   double get totalBandwidth => maxFrequencyHz - minFrequencyHz;
@@ -315,6 +315,12 @@ class SpectrogramData {
 
         final d = deta.last.x; // data[nsampFFT - 1]
         spectrum[halfNsampfft] += d * d; // Nyquist frequency. Correct??
+      }
+
+      if (me.numberOfChannels > 1) {
+        for (int i = 0; i < spectrum.length; ++i) {
+          spectrum[i] /= me.numberOfChannels;
+        }
       }
 
       // Binning.
