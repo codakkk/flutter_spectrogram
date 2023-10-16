@@ -3,11 +3,12 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_spectrogram/src/colour_gradient.dart';
 
 class SpectrogramPainter extends CustomPainter {
   SpectrogramPainter({
     required this.data,
-    this.dominantColor = Colors.white,
+    this.dominantColor = Colors.black,
   })  : _numXDivisions = data.length,
         _numYDivisions = data.isEmpty ? 0 : data[0].length;
 
@@ -18,6 +19,8 @@ class SpectrogramPainter extends CustomPainter {
   final Color dominantColor;
 
   ui.Image? _backBuffer;
+
+  final colours = ColourGradient.audacity();
 
   // y-axis represents frequencies
   // x-axis represents (positive) time
@@ -41,12 +44,6 @@ class SpectrogramPainter extends CustomPainter {
     final cellWidth = width / _numXDivisions;
     final cellHeight = height / _numYDivisions;
 
-    // Rotate by 180 degrees
-    // This rotation is based on my calculation using fftea package.
-    // canvas.translate(size.width * 0.5, size.height * 0.5);
-    // canvas.rotate(-math.pi);
-    // canvas.translate(-size.width * 0.5, -size.height * 0.5);
-
     for (var j = 0; j < _numYDivisions; j++) {
       for (var i = 0; i < _numXDivisions; i++) {
         final intensity = data[i][j];
@@ -59,10 +56,8 @@ class SpectrogramPainter extends CustomPainter {
           _numXDivisions,
           _numYDivisions,
         );
-        // Adjust the smoothing factor as needed
-        final smoothValue = (intensity + neighbour) / 9.0;
 
-        double sy = y + (1.0 - smoothValue) * cellHeight;
+        double sy = y + (1.0 - intensity) * cellHeight;
         double ey = y + cellHeight;
 
         if (sy < 0) {
@@ -78,7 +73,7 @@ class SpectrogramPainter extends CustomPainter {
           Offset(x + cellWidth, ey),
         );
 
-        final paint = Paint()..color = dominantColor;
+        final paint = Paint()..color = colours.getColour(intensity);
         canvas.drawRect(smoothRect, paint);
       }
     }

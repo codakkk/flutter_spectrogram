@@ -1,0 +1,4 @@
+enum FrequencyScale {
+  linear,
+  logarithm,
+}

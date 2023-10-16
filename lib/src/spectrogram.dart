@@ -70,10 +70,22 @@ class _SpectrogramState extends State<Spectrogram> {
       _isProcessing = true;
     });
 
+    //
+    // Normalize
+    //
+    Float64List normalized = Float64List(widget.samples.length);
+
+    final max = widget.samples.reduce((max, x) => x > max ? x : max);
+
+    final norm = 1.0 / max;
+    for (int i = 0; i < widget.samples.length; ++i) {
+      normalized[i] = widget.samples[i] * norm;
+    }
+
     final newData = <Float64List>[];
 
     _stft.run(
-      widget.samples,
+      normalized,
       (Float64x2List chunk) {
         Float64List amplitudes = chunk.discardConjugates().magnitudes();
 

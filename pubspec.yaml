@@ -11,6 +11,8 @@ dependencies:
     sdk: flutter
   
   fftea: ^1.5.0
+  quiver: ^3.2.1
+  wav: ^1.3.0
 
 dev_dependencies:
   flutter_test:
