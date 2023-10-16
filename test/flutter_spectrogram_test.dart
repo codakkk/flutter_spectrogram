@@ -33,6 +33,8 @@ void main() {
       debugPrint("Bins: $numBins");
       debugPrint("Overlap: $overlap");
       debugPrint("Step size: $stepSize");
+
+      final spectrogram = builder.build()!.compute();
     },
   );
 }
