@@ -17,7 +17,7 @@ abstract class FrequencyScaler {
 
 abstract class FreqScalerTrait {
   FreqScalerTrait.init();
-  Tuple2<double, double> scale(int y);
+  (double, double) scale(int y);
 }
 
 class LinearFreq implements FreqScalerTrait {
@@ -26,10 +26,10 @@ class LinearFreq implements FreqScalerTrait {
   LinearFreq.init(double fMaxOrig, double fMaxNew) : ratio = fMaxOrig / fMaxNew;
 
   @override
-  Tuple2<double, double> scale(int y) {
+  (double, double) scale(int y) {
     final f1 = ratio * y.toDouble();
     final f2 = ratio * (y + 1).toDouble();
-    return Tuple2(f1, f2);
+    return (f1, f2);
   }
 }
 
@@ -40,10 +40,10 @@ class LogFreq implements FreqScalerTrait {
       : logCoef = fMaxOrig / math.log(fMaxNew);
 
   @override
-  Tuple2<double, double> scale(int y) {
+  (double, double) scale(int y) {
     final f1 = logCoef * math.log(y.toDouble());
     final f2 = logCoef * math.log((y + 1).toDouble());
-    return Tuple2(f1, f2);
+    return (f1, f2);
   }
 }
 

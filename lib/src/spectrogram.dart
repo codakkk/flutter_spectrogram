@@ -2,55 +2,51 @@ import 'dart:typed_data';
 
 import 'package:fftea/fftea.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_spectrogram/src/data/spectrogram_data.dart';
 import 'package:flutter_spectrogram/src/spectrogram_options.dart';
 import 'package:flutter_spectrogram/src/spectrogram_painter.dart';
+import 'package:wav/wav.dart';
 
+import 'colour_gradient.dart';
+import 'data/spec_options_builder.dart';
 import 'window_type.dart';
 
 class Spectrogram extends StatefulWidget {
   const Spectrogram({
     super.key,
+    required this.audio,
     required this.width,
     required this.height,
-    required this.samples,
     required this.loadingBuilder,
     this.options = const SpectrogramOptions(
       chunkSize: 1024,
       chunkStride: 512,
       windowType: WindowType.hanning,
     ),
-    this.processChunk,
   });
 
   final double width;
   final double height;
 
+  final Wav audio;
+
   final SpectrogramOptions options;
 
-  final List<double> samples;
-
   final Widget Function(BuildContext context) loadingBuilder;
-  final Float64List Function(Float64List amplitudes)? processChunk;
 
   @override
   State<Spectrogram> createState() => _SpectrogramState();
 }
 
 class _SpectrogramState extends State<Spectrogram> {
+  final gradient = ColourGradient.whiteBlack();
+
   bool _isProcessing = true;
-
-  List<Float64List> _data = [];
-
-  late final STFT _stft;
+  SpectrogramData? _spectrogramData;
 
   @override
   void initState() {
     super.initState();
-
-    _stft = STFT(
-      widget.options.chunkSize,
-      widget.options.windowType.apply(widget.options.chunkSize),
-    );
 
     _processSamples();
   }
@@ -59,7 +55,7 @@ class _SpectrogramState extends State<Spectrogram> {
   void didUpdateWidget(covariant Spectrogram oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (widget.samples != oldWidget.samples ||
+    if (widget.audio != oldWidget.audio ||
         widget.options != oldWidget.options) {
       _processSamples();
     }
@@ -70,44 +66,28 @@ class _SpectrogramState extends State<Spectrogram> {
       _isProcessing = true;
     });
 
-    //
-    // Normalize
-    //
-    Float64List normalized = Float64List(widget.samples.length);
+    final samples = widget.audio.toMono();
 
-    final max = widget.samples.reduce((max, x) => x > max ? x : max);
-
-    final norm = 1.0 / max;
-    for (int i = 0; i < widget.samples.length; ++i) {
-      normalized[i] = widget.samples[i] * norm;
-    }
-
-    final newData = <Float64List>[];
-
-    _stft.run(
-      normalized,
-      (Float64x2List chunk) {
-        Float64List amplitudes = chunk.discardConjugates().magnitudes();
-
-        final processFunc = widget.processChunk;
-        if (processFunc != null) {
-          amplitudes = processFunc(amplitudes);
-        }
-
-        newData.add(amplitudes);
-      },
-      widget.options.chunkStride,
+    final builder = SpecOptionsBuilder(
+      data: samples,
+      sampleRate: widget.audio.samplesPerSecond.toDouble(),
+      doNormalize: true,
+      numBins: widget.options.chunkSize,
+      stepSize: widget.options.chunkStride,
+      windowFn: WindowType.gaussian.apply(widget.options.chunkSize),
     );
+
+    final spectrogramData = builder.build()!.compute();
 
     setState(() {
       _isProcessing = false;
-      _data = newData;
+      _spectrogramData = spectrogramData;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isProcessing && _data.isEmpty) {
+    if (_isProcessing && _spectrogramData == null) {
       return widget.loadingBuilder(context);
     }
     return RepaintBoundary(
@@ -115,7 +95,8 @@ class _SpectrogramState extends State<Spectrogram> {
         size: Size(widget.width, widget.height),
         isComplex: true,
         painter: SpectrogramPainter(
-          data: _data,
+          data: _spectrogramData!,
+          gradient: gradient,
         ),
       ),
     );

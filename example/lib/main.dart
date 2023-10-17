@@ -16,29 +16,36 @@ class MainApp extends StatefulWidget {
 }
 
 class _MainAppState extends State<MainApp> {
-  Future<Float64List> _loadAudioFile() async {
+  Future<Wav> _loadAudioFile() async {
     final audio = await Wav.readFile("assets/IT_CLD_02S06.wav");
 
-    return audio.toMono();
+    return audio;
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        body: FutureBuilder(
-            future: _loadAudioFile(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const CircularProgressIndicator();
-              }
-              return Spectrogram(
-                samples: snapshot.data!,
-                height: 100,
-                width: MediaQuery.of(context).size.width,
-                loadingBuilder: (context) => const CircularProgressIndicator(),
-              );
-            }),
+        body: Column(
+          children: [
+            const SizedBox(height: 200),
+            FutureBuilder(
+              future: _loadAudioFile(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const CircularProgressIndicator();
+                }
+                return Spectrogram(
+                  audio: snapshot.data!,
+                  height: 200,
+                  width: MediaQuery.of(context).size.width,
+                  loadingBuilder: (context) =>
+                      const CircularProgressIndicator(),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

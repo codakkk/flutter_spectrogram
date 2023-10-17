@@ -1,39 +1,71 @@
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_spectrogram/src/colour_gradient.dart';
+import 'package:flutter_spectrogram/src/data/frequency_scale.dart';
+import 'package:flutter_spectrogram/src/data/spectrogram_data.dart';
 
 class SpectrogramPainter extends CustomPainter {
   SpectrogramPainter({
     required this.data,
-    this.dominantColor = Colors.black,
-  })  : _numXDivisions = data.length,
-        _numYDivisions = data.isEmpty ? 0 : data[0].length;
+    required this.gradient,
+  });
 
-  final List<Float64List> data;
-  final int _numXDivisions;
-  final int _numYDivisions;
-
-  final Color dominantColor;
-
-  ui.Image? _backBuffer;
-
-  final colours = ColourGradient.audacity();
+  final SpectrogramData data;
+  final ColourGradient gradient;
 
   // y-axis represents frequencies
   // x-axis represents (positive) time
   // intensity of colors represent amplitude of frequencies
   @override
   void paint(Canvas canvas, Size size) {
-    _renderToBackBuffer(size);
+    final paint = Paint()..color = Colors.black;
 
-    if (_backBuffer != null) {
-      canvas.drawImage(_backBuffer!, Offset.zero, Paint());
+    // Render background
+    // canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
+
+    final buffer = data.toBuffer(FrequencyScale.linear);
+
+    final width = size.width;
+    final height = size.height;
+
+    final cellWidth = width / data.width;
+    final cellHeight = height / data.height;
+
+    for (var iFreq = 0; iFreq < data.height; iFreq++) {
+      for (var iTime = 0; iTime < data.width; iTime++) {
+        final intensity = buffer[iTime + iFreq * data.width];
+        final color = gradient.getColour(intensity);
+
+        final x = iTime * cellWidth;
+        final y = iFreq * cellHeight;
+
+        final smoothRect = Rect.fromPoints(
+          Offset(x, y), // Smooth the height of the rectangle
+          Offset(x + cellWidth, y + cellHeight),
+        );
+
+        canvas.drawRect(
+          smoothRect,
+          paint
+            ..color = color
+            ..style = PaintingStyle.fill,
+        );
+      }
     }
   }
 
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    if (oldDelegate is! SpectrogramPainter) {
+      return false;
+    }
+    return data != oldDelegate.data || gradient != oldDelegate.gradient;
+  }
+}
+
+/*
   void _renderToBackBuffer(Size size) {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
@@ -83,33 +115,4 @@ class SpectrogramPainter extends CustomPainter {
 
     _backBuffer = picture.toImageSync(size.width.floor(), size.height.floor());
   }
-
-  double getNeighborValues(
-    int x,
-    int y,
-    int numXDivisions,
-    int numYDivisions,
-  ) {
-    final neighbors = [
-      if (x > 0) data[x - 1][y],
-      if (x < numXDivisions - 1) data[x + 1][y],
-      if (y > 0) data[x][y - 1],
-      if (y < numYDivisions - 1) data[x][y + 1],
-      if (x > 0 && y > 0) data[x - 1][y - 1],
-      if (x > 0 && y < numYDivisions - 1) data[x - 1][y + 1],
-      if (x < numXDivisions - 1 && y > 0) data[x + 1][y - 1],
-      if (x < numXDivisions - 1 && y < numYDivisions - 1) data[x + 1][y + 1],
-    ];
-
-    return neighbors.fold(0.0, (sum, value) => sum + value);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    if (oldDelegate is! SpectrogramPainter) {
-      return false;
-    }
-    return data != oldDelegate.data ||
-        dominantColor != oldDelegate.dominantColor;
-  }
-}
+*/

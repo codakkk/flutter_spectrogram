@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
 class ColourGradient {
-  const ColourGradient({
+  ColourGradient({
     required this.min,
     required this.max,
     required this.colours,
   });
 
-  final double min;
-  final double max;
+  double min;
+  double max;
   final List<Color> colours;
 
   static ColourGradient audacity() {
