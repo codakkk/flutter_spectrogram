@@ -38,7 +38,7 @@ class SpecCompute {
           .skip(p)
           .take(numBins)
           .indexed
-          .map((e) => e.$2 * windowFn[e.$1])
+          .map((e) => e.$2 * 1.0) //windowFn[e.$1])
           .map(
             (e) => Float64x2(e, 0.0),
           );
