@@ -35,6 +35,7 @@ class _MainAppState extends State<MainApp> {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
     return MaterialApp(
       home: Scaffold(
         body: Column(
@@ -45,7 +46,13 @@ class _MainAppState extends State<MainApp> {
                 if (!snapshot.hasData) {
                   return const CircularProgressIndicator();
                 }
-                return SpectrogramWidget(spectrogram: snapshot.data!);
+                return SpectrogramWidget(
+                  size: Size(
+                    mediaQuery.size.width,
+                    mediaQuery.size.height,
+                  ),
+                  spectrogram: snapshot.data!,
+                );
               },
             ),
           ],

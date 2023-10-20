@@ -12,9 +12,9 @@ class SpectrogramUtils {
     required double minFreqStep,
     required double minTimeStep,
     required double frequencyMax,
+    double maximumTimeOversampling = 8.0,
+    double maximumFreqOversampling = 8.0,
   }) {
-    final samplingPeriod = sound.samplingPeriod;
-
     final nyquist = 0.5 / sound.samplingPeriod;
     final physicalAnalysisWidth = 2.0 * effectiveAnalysisWidth;
     final effectiveTimeWidth = effectiveAnalysisWidth / math.sqrt(math.pi);
@@ -22,14 +22,20 @@ class SpectrogramUtils {
 
     final minFreqStep = effectiveFreqWidth / 8.0;
 
-    final timeStep = math.max(minTimeStep, effectiveTimeWidth / 8.0);
-    double freqStep = math.max(minFreqStep, effectiveFreqWidth / 8.0);
+    final timeStep = math.max(
+      minTimeStep,
+      effectiveTimeWidth / maximumTimeOversampling,
+    );
+    double freqStep = math.max(
+      minFreqStep,
+      effectiveFreqWidth / maximumFreqOversampling,
+    );
 
     final physicalDuration = sound.samplingPeriod * sound.numberOfSamples;
 
     // Compute the Time Sampling
     final approxNumberOfSamplesPerWindow =
-        (physicalAnalysisWidth / samplingPeriod).floor();
+        (physicalAnalysisWidth / sound.samplingPeriod).floor();
 
     final halfNSampWindow = approxNumberOfSamplesPerWindow / 2 - 1;
     final nSampWindow = halfNSampWindow * 2;
@@ -46,6 +52,10 @@ class SpectrogramUtils {
 
     final int numberOfTimes =
         1 + ((physicalDuration - physicalAnalysisWidth) / timeStep).floor();
+    final t1 = sound.timeOfFirstSample +
+        0.5 *
+            ((sound.numberOfSamples - 1) * sound.samplingPeriod -
+                (numberOfTimes - 1) * timeStep);
 
     // Compute the freq sampling of the FFT
 
@@ -68,10 +78,20 @@ class SpectrogramUtils {
 
     final int halfNSampFFT = nSampFFT ~/ 2;
 
+    final binWidthSamples =
+        math.max(1, (freqStep * sound.samplingPeriod * nSampFFT)).floor();
+    final binWidthHertz = 1.0 / (sound.samplingPeriod * nSampFFT);
+    freqStep = binWidthSamples * binWidthHertz;
+    numberOfFreqs = (frequencyMax / freqStep).floor();
+    if (numberOfFreqs < 1) {
+      return null;
+    }
+
     final stft = STFT(
       nSampFFT,
       gaussianPraat(
         nSampFFT,
+        // alpha: 4.5,
         nSamplesPerWindowF: physicalAnalysisWidth / sound.samplingPeriod,
       ),
     );
@@ -81,18 +101,15 @@ class SpectrogramUtils {
 
     //const buckets = 120;
 
-    final buckets = 120;
-    // math.max(1, (freqStep * sound.samplingPeriod * nSampFFT)).floor();
-
     stft.run(
       sound.monoAmplitudes,
       (chunk) {
-        // Each time we get a new chunk, add a row to your matrix.
+        // Each time we get a new chunk, add a row to the matrix.
         List<double> chunkPowers = [];
         logBinnedData.add(chunkPowers);
 
         final amp = chunk.discardConjugates().magnitudes();
-        logItr ??= linSpace(amp.length, buckets);
+        logItr ??= linSpace(amp.length, numberOfFreqs);
 
         int i0 = 0;
         for (final i1 in logItr!) {
@@ -116,12 +133,12 @@ class SpectrogramUtils {
       tmax: sound.xmax,
       numberOfTimeSlices: numberOfTimes,
       timeBetweenTimeSlices: timeStep,
-      centerOfFirstTimeSlice: 0.0,
+      centerOfFirstTimeSlice: t1,
       minFrequencyHz: 0.0,
       maxFrequencyHz: frequencyMax,
       numberOfFreqs: numberOfFreqs,
       frequencyStepHz: freqStep,
-      centerOfFirstFrequencyBandHz: 0.0,
+      centerOfFirstFrequencyBandHz: 0.5 * (freqStep - binWidthHertz),
       powerSpectrumDensity: logBinnedData,
     );
   }
