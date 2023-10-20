@@ -58,8 +58,10 @@ class SpectrogramWidgetPainter extends CustomPainter {
     final cellWidth = width / spectrogram.powerSpectrumDensity.length;
     final cellHeight = height / spectrogram.powerSpectrumDensity[0].length;
 
-    for (int t = 0; t < spectrogram.powerSpectrumDensity.length; t++) {
-      for (int f = 0; f < spectrogram.powerSpectrumDensity[0].length; f++) {
+    final timeBin = spectrogram.powerSpectrumDensity.length;
+    final frequenciesBin = spectrogram.powerSpectrumDensity[0].length;
+    for (int t = 0; t < timeBin; t++) {
+      for (int f = 0; f < frequenciesBin; f++) {
         final intensity = spectrogram.powerSpectrumDensity[t][f];
         final color = gradient.getColour(intensity);
 
