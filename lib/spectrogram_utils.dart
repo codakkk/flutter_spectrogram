@@ -68,11 +68,21 @@ class SpectrogramUtils {
 
     final int halfNSampFFT = nSampFFT ~/ 2;
 
-    final stft = STFT(nSampFFT, gaussian(nSampFFT));
-    const buckets = 120;
+    final stft = STFT(
+      nSampFFT,
+      gaussianPraat(
+        nSampFFT,
+        nSamplesPerWindowF: physicalAnalysisWidth / sound.samplingPeriod,
+      ),
+    );
 
     Uint64List? logItr;
     final List<List<double>> logBinnedData = [];
+
+    //const buckets = 120;
+
+    final buckets = 120;
+    // math.max(1, (freqStep * sound.samplingPeriod * nSampFFT)).floor();
 
     stft.run(
       sound.monoAmplitudes,
@@ -94,7 +104,7 @@ class SpectrogramUtils {
             power /= i1 - i0;
 
             // Add data to the row.
-            chunkPowers.add(power);
+            chunkPowers.add(math.log(power));
           }
           i0 = i1;
         }
@@ -129,6 +139,23 @@ Float64List gaussian(
   for (int i = 0; i < size; i++) {
     final x = -0.5 * math.pow((i - samplingPeriods) / standardDeviation, 2);
     res[i] = math.exp(x);
+  }
+
+  return res;
+}
+
+Float64List gaussianPraat(
+  int size, {
+  required double nSamplesPerWindowF,
+}) {
+  final res = Float64List(size);
+
+  for (int i = 0; i < size; i++) {
+    final imid = 0.5 * (size + 1);
+    final edge = math.exp(-12.0);
+    final phase = (i.toDouble() - imid) / nSamplesPerWindowF; // -0.5 .. +0.5
+    final x = (math.exp(-48.0 * phase * phase) - edge) / (1.0 - edge);
+    res[i] = x;
   }
 
   return res;

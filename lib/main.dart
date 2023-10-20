@@ -10,9 +10,14 @@ void main() {
   runApp(const MainApp());
 }
 
-class MainApp extends StatelessWidget {
+class MainApp extends StatefulWidget {
   const MainApp({super.key});
 
+  @override
+  State<MainApp> createState() => _MainAppState();
+}
+
+class _MainAppState extends State<MainApp> {
   Future<Spectrogram> _test() async {
     final root = await rootBundle.load('assets/audio.wav');
     final wav = Wav.read(root.buffer.asUint8List());
@@ -24,7 +29,7 @@ class MainApp extends StatelessWidget {
       effectiveAnalysisWidth: 0.005,
       minFreqStep: 20.0,
       minTimeStep: 0.002,
-      frequencyMax: 2000.0,
+      frequencyMax: 5000.0,
     )!;
   }
 
@@ -32,14 +37,18 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        body: FutureBuilder(
-          future: _test(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return const CircularProgressIndicator();
-            }
-            return SpectrogramWidget(spectrogram: snapshot.data!);
-          },
+        body: Column(
+          children: [
+            FutureBuilder(
+              future: _test(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const CircularProgressIndicator();
+                }
+                return SpectrogramWidget(spectrogram: snapshot.data!);
+              },
+            ),
+          ],
         ),
       ),
     );

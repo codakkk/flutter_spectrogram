@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/colour_gradient.dart';
 import '../models/spectrogram.dart';
 
 class SpectrogramWidget extends StatefulWidget {
@@ -32,6 +33,25 @@ class SpectrogramWidgetPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final gradient = ColourGradient.whiteBlack();
+
+    double min = spectrogram.powerSpectrumDensity[0][0];
+    double max = spectrogram.powerSpectrumDensity[0][0];
+
+    for (var row in spectrogram.powerSpectrumDensity) {
+      for (var value in row) {
+        if (value < min) {
+          min = value;
+        }
+        if (value > max) {
+          max = value;
+        }
+      }
+    }
+
+    gradient.min = min;
+    gradient.max = max;
+
     final width = size.width;
     final height = size.height;
 
@@ -40,9 +60,11 @@ class SpectrogramWidgetPainter extends CustomPainter {
 
     for (int t = 0; t < spectrogram.powerSpectrumDensity.length; t++) {
       for (int f = 0; f < spectrogram.powerSpectrumDensity[0].length; f++) {
-        final logPower = spectrogram.powerSpectrumDensity[t][f];
-        final color = mapIntensityToColor(logPower);
+        final intensity = spectrogram.powerSpectrumDensity[t][f];
+        final color = gradient.getColour(intensity);
 
+        // height - f * cellHeight is because Canvas renders from top to bottom
+        // we just render up-side down
         final rect = Rect.fromPoints(
           Offset(t * cellWidth, height - f * cellHeight),
           Offset((t + 1) * cellWidth, height - (f + 1) * cellHeight),
@@ -55,13 +77,6 @@ class SpectrogramWidgetPainter extends CustomPainter {
         canvas.drawRect(rect, paint);
       }
     }
-  }
-
-  Color mapIntensityToColor(double intensity) {
-    // Map intensity to grayscale color (black to white)
-    final grayValue = !intensity.isFinite ? 0 : (intensity * 255).toInt();
-
-    return Color.fromARGB(255, grayValue, grayValue, grayValue);
   }
 
   @override
