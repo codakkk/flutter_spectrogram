@@ -20,8 +20,6 @@ class SpectrogramUtils {
     final effectiveTimeWidth = effectiveAnalysisWidth / math.sqrt(math.pi);
     final effectiveFreqWidth = 1.0 / effectiveTimeWidth;
 
-    final minFreqStep = effectiveFreqWidth / 8.0;
-
     final timeStep = math.max(
       minTimeStep,
       effectiveTimeWidth / maximumTimeOversampling,

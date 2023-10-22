@@ -24,12 +24,21 @@ class _MainAppState extends State<MainApp> {
 
     final sound = Sound.fromWav(wav);
 
+    const timeSteps = 1000;
+    const frequencySteps = 250.0;
+    const fmax = 5000.0; // Praat's viewTo
+
+    const widgetSize = 400;
+    const windowLength = 0.005;
+    const minimumTimeStep = widgetSize / timeSteps;
+    const minimumFreqStep = fmax / frequencySteps;
+
     return SpectrogramUtils.soundToSpectrogram(
       sound: sound,
-      effectiveAnalysisWidth: 0.005,
-      minFreqStep: 20.0,
-      minTimeStep: 0.002,
-      frequencyMax: 5000.0,
+      effectiveAnalysisWidth: windowLength,
+      frequencyMax: fmax,
+      minTimeStep: minimumTimeStep,
+      minFreqStep: minimumFreqStep,
     )!;
   }
 
@@ -47,9 +56,9 @@ class _MainAppState extends State<MainApp> {
                   return const CircularProgressIndicator();
                 }
                 return SpectrogramWidget(
-                  size: Size(
-                    mediaQuery.size.width,
-                    mediaQuery.size.height,
+                  size: const Size(
+                    400,
+                    200,
                   ),
                   spectrogram: snapshot.data!,
                 );

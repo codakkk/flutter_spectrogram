@@ -2,14 +2,38 @@ import 'package:flutter/material.dart';
 
 class ColourGradient {
   ColourGradient({
-    required this.min,
-    required this.max,
+    required double min,
+    required double max,
     required this.colours,
-  });
+  })  : _min = min,
+        _max = max,
+        m = ((colours.length - 1).toDouble()) / (max - min);
 
-  double min;
-  double max;
+  double _min;
+  double _max;
+
+  double m;
   final List<Color> colours;
+
+  double get min => _min;
+
+  set min(double value) {
+    _min = value;
+
+    _recalculateM();
+  }
+
+  double get max => _max;
+
+  set max(double value) {
+    _max = value;
+
+    _recalculateM();
+  }
+
+  void _recalculateM() {
+    m = ((colours.length - 1).toDouble()) / (_max - _min);
+  }
 
   static ColourGradient audacity() {
     final list = <Color>[];
@@ -23,27 +47,13 @@ class ColourGradient {
   }
 
   static ColourGradient blackWhite() {
-    final list = <Color>[];
-    list.add(const Color.fromARGB(
-      255,
-      0,
-      0,
-      0,
-    )); // Black
-    list.add(const Color.fromARGB(
-      255,
-      255,
-      255,
-      255,
-    )); // White
+    final list = <Color>[Colors.black, Colors.white];
 
     return ColourGradient(min: 0.0, max: 1.0, colours: list);
   }
 
   static ColourGradient whiteBlack() {
-    final list = <Color>[];
-    list.add(const Color.fromARGB(255, 255, 255, 255)); // White
-    list.add(const Color.fromARGB(255, 0, 0, 0)); // Black
+    final list = <Color>[Colors.white, Colors.black];
 
     return ColourGradient(min: 0.0, max: 1.0, colours: list);
   }
@@ -63,7 +73,6 @@ class ColourGradient {
     }
 
     // Get the scaled values and indexes to lookup the colour
-    final m = ((len - 1).toDouble()) / (max - min); // TODO: Precalc this value
     final scaledValue = (value - min) * m;
     final idxValue = scaledValue.floor();
     final ratio = scaledValue - idxValue.toDouble();

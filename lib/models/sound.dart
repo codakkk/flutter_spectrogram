@@ -25,6 +25,7 @@ The frequency axis for the FFT is linked to the number N
 
  */
 
+// This is the same as Praat's Sound object.
 @freezed
 class Sound with _$Sound {
   const factory Sound({
