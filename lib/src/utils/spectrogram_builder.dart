@@ -1,32 +1,86 @@
 import 'dart:typed_data';
 
 import 'package:fftea/fftea.dart';
-import 'package:spectrogram_tests/models/spectrogram.dart';
-import 'dart:math' as math;
-import 'models/sound.dart';
 
-class SpectrogramUtils {
-  static Spectrogram? soundToSpectrogram({
-    required Sound sound,
-    required double effectiveAnalysisWidth,
-    required double minFreqStep,
-    required double minTimeStep,
-    required double frequencyMax,
-    double maximumTimeOversampling = 8.0,
-    double maximumFreqOversampling = 8.0,
-  }) {
+import 'dart:math' as math;
+
+import '../../flutter_spectrogram.dart';
+
+/// Example Usage
+///
+/// final root = await rootBundle.load('assets/audio.wav');
+/// final wav = Wav.read(root.buffer.asUint8List());
+///
+/// final sound = Sound.fromWav(wav);
+///
+/// const timeSteps = 1000;
+/// const frequencySteps = 250.0;
+/// const fmax = 5000.0; // Praat's viewTo
+///
+/// const widgetSize = 400;
+/// const windowLength = 0.005;
+/// const minimumTimeStep = widgetSize / timeSteps;
+/// const minimumFreqStep = fmax / frequencySteps;
+///
+/// final builder = SpectrogramBuilder()
+///   ..sound = sound
+///   ..effectiveAnalysisWidth = windowLength
+///   ..frequencyMax = fmax
+///   ..minTimeStep = minimumTimeStep
+///   ..minFrequencyStep = minimumFreqStep;
+///
+/// final spectrogram = builder.build();
+///
+class SpectrogramBuilder {
+  SpectrogramBuilder()
+      : _minFreqStep = 250,
+        _effectiveAnalysisWidth = 0.005,
+        _frequencyMax = 5000.0,
+        _minTimeStep = 1000.0,
+        _maximumFreqOversampling = 8.0,
+        _maximumTimeOversampling = 8.0;
+
+  Sound? _sound;
+
+  double _effectiveAnalysisWidth;
+  double _minFreqStep;
+  double _minTimeStep;
+  double _frequencyMax;
+
+  double _maximumTimeOversampling;
+  double _maximumFreqOversampling;
+
+  set sound(Sound sound) => _sound = sound;
+
+  set effectiveAnalysisWidth(double v) => _effectiveAnalysisWidth = v;
+
+  set minFrequencyStep(double v) => _minFreqStep = v;
+  set minTimeStep(double v) => _minTimeStep = v;
+
+  set frequencyMax(double v) => _frequencyMax = v;
+
+  set maximumTimeOversampling(double v) => _maximumTimeOversampling = v;
+  set maximumFreqOversampling(double v) => _maximumFreqOversampling = v;
+
+  Spectrogram build() {
+    if (_sound == null) {
+      throw Exception('Cannot build a Spectrogram without a Sound');
+    }
+
+    final sound = _sound!;
+
     final nyquist = 0.5 / sound.samplingPeriod;
-    final physicalAnalysisWidth = 2.0 * effectiveAnalysisWidth;
-    final effectiveTimeWidth = effectiveAnalysisWidth / math.sqrt(math.pi);
+    final physicalAnalysisWidth = 2.0 * _effectiveAnalysisWidth;
+    final effectiveTimeWidth = _effectiveAnalysisWidth / math.sqrt(math.pi);
     final effectiveFreqWidth = 1.0 / effectiveTimeWidth;
 
     final timeStep = math.max(
-      minTimeStep,
-      effectiveTimeWidth / maximumTimeOversampling,
+      _minTimeStep,
+      effectiveTimeWidth / _maximumTimeOversampling,
     );
     double freqStep = math.max(
-      minFreqStep,
-      effectiveFreqWidth / maximumFreqOversampling,
+      _minFreqStep,
+      effectiveFreqWidth / _maximumFreqOversampling,
     );
 
     final physicalDuration = sound.samplingPeriod * sound.numberOfSamples;
@@ -57,20 +111,20 @@ class SpectrogramUtils {
 
     // Compute the freq sampling of the FFT
 
-    if (frequencyMax <= 0.0 || frequencyMax > nyquist) {
-      frequencyMax = nyquist;
+    if (_frequencyMax <= 0.0 || _frequencyMax > nyquist) {
+      _frequencyMax = nyquist;
     }
 
-    int numberOfFreqs = (frequencyMax / freqStep).floor();
+    int numberOfFreqs = (_frequencyMax / freqStep).floor();
 
     if (numberOfFreqs < 1) {
-      return null;
+      return Spectrogram.zero;
     }
 
     int nSampFFT = 1;
 
     while (nSampFFT < nSampWindow ||
-        nSampFFT < 2 * numberOfFreqs * (nyquist / frequencyMax)) {
+        nSampFFT < 2 * numberOfFreqs * (nyquist / _frequencyMax)) {
       nSampFFT *= 2;
     }
 
@@ -80,9 +134,10 @@ class SpectrogramUtils {
         math.max(1, (freqStep * sound.samplingPeriod * nSampFFT)).floor();
     final binWidthHertz = 1.0 / (sound.samplingPeriod * nSampFFT);
     freqStep = binWidthSamples * binWidthHertz;
-    numberOfFreqs = (frequencyMax / freqStep).floor();
+    numberOfFreqs = (_frequencyMax / freqStep).floor();
+
     if (numberOfFreqs < 1) {
-      return null;
+      return Spectrogram.zero;
     }
 
     final stft = STFT(
@@ -124,7 +179,7 @@ class SpectrogramUtils {
           i0 = i1;
         }
       },
-      halfNSampFFT,
+      halfNSampFFT ~/ 2,
     );
     return Spectrogram(
       tmin: sound.xmin,
@@ -133,7 +188,7 @@ class SpectrogramUtils {
       timeBetweenTimeSlices: timeStep,
       centerOfFirstTimeSlice: t1,
       minFrequencyHz: 0.0,
-      maxFrequencyHz: frequencyMax,
+      maxFrequencyHz: _frequencyMax,
       numberOfFreqs: numberOfFreqs,
       frequencyStepHz: freqStep,
       centerOfFirstFrequencyBandHz: 0.5 * (freqStep - binWidthHertz),

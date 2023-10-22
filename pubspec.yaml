@@ -1,5 +1,5 @@
-name: spectrogram_tests
-description: A new Flutter project.
+name: flutter_spectrogram
+description: A Flutter package for Spectrogram rendering from Sound (only supports Wav for now)
 publish_to: 'none'
 version: 0.1.0
 

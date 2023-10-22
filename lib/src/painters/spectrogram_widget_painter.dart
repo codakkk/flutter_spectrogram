@@ -4,30 +4,42 @@ import '../models/colour_gradient.dart';
 import '../models/spectrogram.dart';
 
 class SpectrogramWidgetPainter extends CustomPainter {
-  const SpectrogramWidgetPainter(this.spectrogram);
+  const SpectrogramWidgetPainter({
+    required this.spectrogram,
+    required this.zoom,
+    this.applyDynamicRange = false,
+  });
 
   final Spectrogram spectrogram;
+  final double zoom;
+
+  final bool applyDynamicRange;
 
   @override
   void paint(Canvas canvas, Size size) {
     final gradient = ColourGradient.whiteBlack();
 
-    double min = spectrogram.powerSpectrumDensity[0][0];
-    double max = spectrogram.powerSpectrumDensity[0][0];
+    double minFreq = spectrogram.powerSpectrumDensity[0][0];
+    double maxFreq = spectrogram.powerSpectrumDensity[0][0];
 
     for (var row in spectrogram.powerSpectrumDensity) {
       for (var value in row) {
-        if (value < min) {
-          min = value;
+        if (value < minFreq) {
+          minFreq = value;
         }
-        if (value > max) {
-          max = value;
+        if (value > maxFreq) {
+          maxFreq = value;
         }
       }
     }
 
-    gradient.min = min;
-    gradient.max = max;
+    if (applyDynamicRange) {
+      gradient.min = 0.0;
+      gradient.max = 1.0;
+    } else {
+      gradient.min = minFreq;
+      gradient.max = maxFreq;
+    }
 
     final width = size.width;
     final height = size.height;
@@ -35,13 +47,28 @@ class SpectrogramWidgetPainter extends CustomPainter {
     final timeBin = spectrogram.powerSpectrumDensity.length;
     final frequenciesBin = spectrogram.numberOfFreqs;
 
-    final cellWidth = width / timeBin;
+    int zoomedTimeBin = (timeBin / zoom).floor();
+    // Calculate the center point
+    int centerTimeBin = timeBin ~/ 2;
+
+    // Calculate the starting and ending indices for the visible time bins
+    int visibleTimeStart = centerTimeBin - zoomedTimeBin ~/ 2;
+    int visibleTimeEnd = centerTimeBin + (zoomedTimeBin + 1) ~/ 2;
+    final cellWidth = width / zoomedTimeBin;
     final cellHeight = height / frequenciesBin;
 
+    //final zoomedSeconds = 2 * (spectrogram.tmax / (2.0 * zoom));
     // spectrogram.powerSpectrumDensity[0].length;
-    for (int t = 0; t < timeBin; t++) {
+
+    for (int t = visibleTimeStart; t < visibleTimeEnd; t++) {
       for (int f = 0; f < frequenciesBin; f++) {
-        final intensity = spectrogram.powerSpectrumDensity[t][f];
+        // Power
+        double intensity = spectrogram.powerSpectrumDensity[t][f];
+
+        if (applyDynamicRange) {
+          intensity = (intensity - minFreq) / (maxFreq - minFreq);
+        }
+
         final color = gradient.getColour(intensity);
 
         // height - f * cellHeight is because Canvas renders from top to bottom
@@ -49,9 +76,9 @@ class SpectrogramWidgetPainter extends CustomPainter {
         // +1 and -1 on both x and y of the second offset
         // is just to removed those lines between rectangles
         final rect = Rect.fromPoints(
-          Offset(t * cellWidth, height - f * cellHeight),
+          Offset((t - visibleTimeStart) * cellWidth, height - f * cellHeight),
           Offset(
-            ((t + 1) * cellWidth).ceilToDouble(),
+            ((t - visibleTimeStart + 1) * cellWidth).ceilToDouble(),
             (height - (f + 1) * cellHeight).floorToDouble(),
           ),
         );

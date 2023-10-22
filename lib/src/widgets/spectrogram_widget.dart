@@ -8,10 +8,14 @@ class SpectrogramWidget extends StatefulWidget {
     super.key,
     required this.spectrogram,
     required this.size,
+    this.zoom = 1.0,
+    this.applyDynamicRange = false,
   });
 
   final Spectrogram spectrogram;
+  final double zoom;
   final Size size;
+  final bool applyDynamicRange;
 
   @override
   State<SpectrogramWidget> createState() => _SpectrogramWidgetState();
@@ -22,7 +26,11 @@ class _SpectrogramWidgetState extends State<SpectrogramWidget> {
   Widget build(BuildContext context) {
     return CustomPaint(
       size: widget.size,
-      painter: SpectrogramWidgetPainter(widget.spectrogram),
+      painter: SpectrogramWidgetPainter(
+        spectrogram: widget.spectrogram,
+        zoom: widget.zoom,
+        applyDynamicRange: widget.applyDynamicRange,
+      ),
     );
   }
 }

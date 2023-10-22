@@ -1,10 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:spectrogram_tests/models/sound.dart';
-import 'package:spectrogram_tests/models/spectrogram.dart';
-import 'package:spectrogram_tests/spectrogram_utils.dart';
-import 'package:spectrogram_tests/widgets/spectrogram_widget.dart';
 import 'package:wav/wav.dart';
+
+import 'flutter_spectrogram.dart';
 
 void main() {
   runApp(const MainApp());
@@ -18,6 +17,20 @@ class MainApp extends StatefulWidget {
 }
 
 class _MainAppState extends State<MainApp> {
+  double _zoom = 1.0;
+
+  void zoomIn() {
+    setState(() {
+      _zoom = clampDouble(_zoom * 1.05, 1.0, 100);
+    });
+  }
+
+  void zoomOut() {
+    setState(() {
+      _zoom = clampDouble(_zoom / 1.05, 1.0, 100);
+    });
+  }
+
   Future<Spectrogram> _test() async {
     final root = await rootBundle.load('assets/audio.wav');
     final wav = Wav.read(root.buffer.asUint8List());
@@ -33,22 +46,30 @@ class _MainAppState extends State<MainApp> {
     const minimumTimeStep = widgetSize / timeSteps;
     const minimumFreqStep = fmax / frequencySteps;
 
-    return SpectrogramUtils.soundToSpectrogram(
-      sound: sound,
-      effectiveAnalysisWidth: windowLength,
-      frequencyMax: fmax,
-      minTimeStep: minimumTimeStep,
-      minFreqStep: minimumFreqStep,
-    )!;
+    final builder = SpectrogramBuilder()
+      ..sound = sound
+      ..effectiveAnalysisWidth = windowLength
+      ..frequencyMax = fmax
+      ..minTimeStep = minimumTimeStep
+      ..minFrequencyStep = minimumFreqStep;
+    return builder.build();
   }
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
+    //final mediaQuery = MediaQuery.of(context);
     return MaterialApp(
       home: Scaffold(
         body: Column(
           children: [
+            IconButton(
+              onPressed: zoomIn,
+              icon: const Icon(Icons.zoom_in),
+            ),
+            IconButton(
+              onPressed: zoomOut,
+              icon: const Icon(Icons.zoom_out),
+            ),
             FutureBuilder(
               future: _test(),
               builder: (context, snapshot) {
@@ -61,6 +82,8 @@ class _MainAppState extends State<MainApp> {
                     200,
                   ),
                   spectrogram: snapshot.data!,
+                  zoom: _zoom,
+                  applyDynamicRange: true,
                 );
               },
             ),

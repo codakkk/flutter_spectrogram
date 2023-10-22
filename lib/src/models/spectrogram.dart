@@ -20,6 +20,20 @@ class Spectrogram {
         assert(timeBetweenTimeSlices > 0),
         assert(frequencyStepHz > 0);
 
+  static Spectrogram zero = Spectrogram(
+    tmin: 0.0,
+    tmax: 0.0,
+    numberOfTimeSlices: 0,
+    timeBetweenTimeSlices: 0,
+    centerOfFirstTimeSlice: 0,
+    minFrequencyHz: 0,
+    maxFrequencyHz: 0,
+    numberOfFreqs: 0,
+    frequencyStepHz: 0,
+    centerOfFirstFrequencyBandHz: 0,
+    powerSpectrumDensity: [],
+  );
+
   final double tmin;
   final double tmax;
 
