@@ -31,19 +31,18 @@ class _MainAppState extends State<MainApp> {
     });
   }
 
-  Future<Spectrogram> _test() async {
+  Future<Spectrogram> _test(Size size) async {
     final root = await rootBundle.load('assets/audio.wav');
     final wav = Wav.read(root.buffer.asUint8List());
 
     final sound = Sound.fromWav(wav);
 
-    const timeSteps = 1000;
+    const noOfTimeSteps = 1000;
     const frequencySteps = 250.0;
     const fmax = 5000.0; // Praat's viewTo
 
-    const widgetSize = 400;
     const windowLength = 0.005;
-    const minimumTimeStep = widgetSize / timeSteps;
+    final minimumTimeStep = size.width / noOfTimeSteps;
     const minimumFreqStep = fmax / frequencySteps;
 
     final builder = SpectrogramBuilder()
@@ -57,33 +56,34 @@ class _MainAppState extends State<MainApp> {
 
   @override
   Widget build(BuildContext context) {
-    //final mediaQuery = MediaQuery.of(context);
+    final mediaQuery = MediaQuery.of(context);
+    final size = Size(
+      mediaQuery.size.width,
+      mediaQuery.size.height,
+    );
     return MaterialApp(
       home: Scaffold(
         body: Column(
           children: [
-            IconButton(
+            /*IconButton(
               onPressed: zoomIn,
               icon: const Icon(Icons.zoom_in),
             ),
             IconButton(
               onPressed: zoomOut,
               icon: const Icon(Icons.zoom_out),
-            ),
+            ),*/
             FutureBuilder(
-              future: _test(),
+              future: _test(size),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const CircularProgressIndicator();
                 }
                 return SpectrogramWidget(
-                  size: const Size(
-                    400,
-                    200,
-                  ),
+                  size: size,
                   spectrogram: snapshot.data!,
                   zoom: _zoom,
-                  applyDynamicRange: true,
+                  applyDynamicRange: false,
                 );
               },
             ),

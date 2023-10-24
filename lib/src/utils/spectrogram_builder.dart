@@ -70,7 +70,7 @@ class SpectrogramBuilder {
     final sound = _sound!;
 
     final nyquist = 0.5 / sound.samplingPeriod;
-    final physicalAnalysisWidth = 2.0 * _effectiveAnalysisWidth;
+    final physicalAnalysisWidth = 2 * _effectiveAnalysisWidth;
     final effectiveTimeWidth = _effectiveAnalysisWidth / math.sqrt(math.pi);
     final effectiveFreqWidth = 1.0 / effectiveTimeWidth;
 
@@ -102,8 +102,10 @@ class SpectrogramBuilder {
       );
     }
 
-    final int numberOfTimes =
-        1 + ((physicalDuration - physicalAnalysisWidth) / timeStep).floor();
+    final int numberOfTimes = 1 +
+        ((physicalDuration - physicalAnalysisWidth) / timeStep).floor(); // >= 1
+
+    // Center of first frame
     final t1 = sound.timeOfFirstSample +
         0.5 *
             ((sound.numberOfSamples - 1) * sound.samplingPeriod -
@@ -140,13 +142,15 @@ class SpectrogramBuilder {
       return Spectrogram.zero;
     }
 
+    final window = gaussianPraat(
+      nSampFFT,
+      // alpha: 4.5,
+      nSamplesPerWindowF: physicalAnalysisWidth / sound.samplingPeriod,
+    );
+
     final stft = STFT(
       nSampFFT,
-      gaussianPraat(
-        nSampFFT,
-        // alpha: 4.5,
-        nSamplesPerWindowF: physicalAnalysisWidth / sound.samplingPeriod,
-      ),
+      window,
     );
 
     Uint64List? logItr;
@@ -179,7 +183,7 @@ class SpectrogramBuilder {
           i0 = i1;
         }
       },
-      halfNSampFFT ~/ 2,
+      halfNSampFFT,
     );
     return Spectrogram(
       tmin: sound.xmin,
