@@ -15,6 +15,7 @@ class SpectrogramWidgetPainter extends CustomPainter {
 
   final bool applyDynamicRange;
 
+  // We need to adjust rendering based on Max Frequency
   @override
   void paint(Canvas canvas, Size size) {
     final gradient = ColourGradient.whiteBlack();
