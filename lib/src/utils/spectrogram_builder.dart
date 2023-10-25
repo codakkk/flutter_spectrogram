@@ -136,7 +136,7 @@ class SpectrogramBuilder {
         math.max(1, (freqStep * sound.samplingPeriod * nSampFFT)).floor();
     final binWidthHertz = 1.0 / (sound.samplingPeriod * nSampFFT);
     freqStep = binWidthSamples * binWidthHertz;
-    numberOfFreqs = (_frequencyMax / freqStep).floor();
+    numberOfFreqs = (_frequencyMax / freqStep).floor() * 2;
 
     if (numberOfFreqs < 1) {
       return Spectrogram.zero;
