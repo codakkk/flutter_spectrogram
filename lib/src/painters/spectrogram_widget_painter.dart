@@ -52,17 +52,19 @@ class SpectrogramWidgetPainter extends CustomPainter {
     // Calculate the center point
     int centerTimeBin = timeBin ~/ 2;
 
+    final int freqBins = frequenciesBin ~/ 2;
+
     // Calculate the starting and ending indices for the visible time bins
     int visibleTimeStart = centerTimeBin - zoomedTimeBin ~/ 2;
     int visibleTimeEnd = centerTimeBin + (zoomedTimeBin + 1) ~/ 2;
     final cellWidth = width / zoomedTimeBin;
-    final cellHeight = height / frequenciesBin;
+    final cellHeight = height / (freqBins);
 
     //final zoomedSeconds = 2 * (spectrogram.tmax / (2.0 * zoom));
     // spectrogram.powerSpectrumDensity[0].length;
 
     for (int t = visibleTimeStart; t < visibleTimeEnd; t++) {
-      for (int f = 0; f < frequenciesBin; f++) {
+      for (int f = 0; f < freqBins; f++) {
         // Power
         double intensity = spectrogram.powerSpectrumDensity[t][f];
 
