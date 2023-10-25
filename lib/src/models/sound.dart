@@ -28,6 +28,8 @@ The frequency axis for the FFT is linked to the number N
 // This is the same as Praat's Sound object.
 @freezed
 class Sound with _$Sound {
+  const Sound._();
+
   const factory Sound({
     required double xmin, // Seconds
     required double xmax, // Seconds
@@ -61,5 +63,84 @@ class Sound with _$Sound {
       amplitudes: wav.channels,
       monoAmplitudes: mono,
     );
+  }
+
+  static Sound extractPart({
+    required Sound sound,
+    required double tmin,
+    required double tmax,
+    required double relativeWidth,
+    required bool preserveTimes,
+  }) {
+    // Window should be rectangular lol
+    // Function_unidirectionalAutowindow
+    if (tmin >= tmax) {
+      tmin = sound.xmin;
+      tmax = sound.xmax;
+    }
+
+    if (relativeWidth != 1.0) {
+      final double margin = 0.5 * (relativeWidth - 1) * (tmax - tmin);
+      tmin -= margin;
+      tmax += margin;
+    }
+
+    /*
+			Determine index range. We use all the real or virtual samples that fit within [t1..t2].
+		*/
+    final int itmin =
+        1 + ((tmin - sound.timeOfFirstSample) / sound.samplingPeriod).ceil();
+    final int itmax =
+        1 + ((tmax - sound.timeOfFirstSample) / sound.samplingPeriod).floor();
+
+    if (itmin > itmax) {
+      throw Exception('Extracted Sound would contain no samples.');
+    }
+
+    final int numberOfSamples = itmax - itmin + 1;
+    Sound extracted = Sound(
+      numberOfChannels: sound.numberOfChannels,
+      xmin: tmin,
+      xmax: tmax,
+      numberOfSamples: numberOfSamples,
+      samplingPeriod: sound.samplingPeriod,
+      timeOfFirstSample:
+          sound.timeOfFirstSample + (itmin - 1) * sound.samplingPeriod,
+      ymin: 0,
+      ymax: 1,
+      amplitudes: List.filled(
+        sound.numberOfChannels,
+        Float64List(numberOfSamples),
+      ),
+      monoAmplitudes: Float64List(numberOfSamples),
+    );
+
+    //
+    if (!preserveTimes) {
+      extracted = extracted.copyWith(
+        xmin: 0.0,
+        xmax: extracted.xmax - tmin,
+        timeOfFirstSample: extracted.timeOfFirstSample - tmin,
+      );
+    }
+
+    for (int channel = 0; channel < extracted.numberOfChannels; ++channel) {
+      final clippedItMin = itmin < 1 ? 1 : itmin;
+      final clippedItMax =
+          itmax > sound.numberOfSamples ? sound.numberOfSamples : itmax;
+      final row = extracted.amplitudes[channel].sublist(
+        1 - itmin + clippedItMin,
+        1 - itmin + clippedItMax,
+      );
+      final toCopy = row.sublist(clippedItMin, clippedItMax);
+
+      for (int i = 0; i < row.length; ++i) {
+        row[i] = toCopy[i];
+      }
+
+      //thy z.row (ichan).part (1 - itmin + itmin_clipped, 1 - itmin + itmax_clipped)
+      // <<=  my z.row (ichan).part (itmin_clipped, itmax_clipped);
+    }
+    return extracted;
   }
 }
