@@ -36,4 +36,50 @@ class Spectrogram with _$Spectrogram {
 
   double get totalDuration => tmax - tmin;
   double get totalBandwidth => maxFrequencyHz - minFrequencyHz;
+
+  (int nt, int ixmin, int ixmax) getWindowSamplesX(double xmin, double xmax) {
+    int ixmin =
+        ((xmin - centerOfFirstTimeSlice) / timeBetweenTimeSlices).ceil();
+    int ixmax =
+        ((xmax - centerOfFirstTimeSlice) / timeBetweenTimeSlices).floor();
+
+    if (ixmin < 0) {
+      ixmin = 0;
+    }
+
+    if (ixmax > numberOfTimeSlices) {
+      ixmax = numberOfTimeSlices;
+    }
+
+    int nt = 0;
+
+    if (ixmin <= ixmax) {
+      nt = ixmax - ixmin;
+    }
+
+    return (nt, ixmin, ixmax);
+  }
+
+  (int nf, int iymin, int iymax) getWindowSamplesY(double ymin, double ymax) {
+    int iymin =
+        ((ymin - centerOfFirstFrequencyBandHz) / frequencyStepHz).ceil();
+    int iymax =
+        ((ymax - centerOfFirstFrequencyBandHz) / frequencyStepHz).floor();
+
+    if (iymin < 0) {
+      iymin = 0;
+    }
+
+    if (iymax > numberOfFreqs) {
+      iymax = numberOfFreqs;
+    }
+
+    int nf = 0;
+
+    if (iymin <= iymax) {
+      nf = iymax - iymin;
+    }
+
+    return (nf, iymin, iymax);
+  }
 }

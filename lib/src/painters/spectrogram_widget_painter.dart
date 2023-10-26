@@ -27,10 +27,26 @@ class SpectrogramWidgetPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final gradient = ColourGradient.whiteBlack();
 
+    final (nt, itmin, itmax) = spectrogram.getWindowSamplesX(
+      tmin - 0.49999 * spectrogram.timeBetweenTimeSlices,
+      tmax + 0.49999 * spectrogram.timeBetweenTimeSlices,
+    );
+
+    final (nf, ifmin, ifmax) = spectrogram.getWindowSamplesY(
+      fmin - 0.49999 * spectrogram.frequencyStepHz,
+      fmax + 0.49999 * spectrogram.frequencyStepHz,
+    );
+
+    if (nt == 0 || nf == 0) {
+      return;
+    }
+
+    debugPrint('$nt - $nf');
+
     final width = size.width;
     final height = size.height;
 
-    final timeBin = spectrogram.powerSpectrumDensity.length;
+    final timeBin = spectrogram.numberOfTimeSlices;
     final frequenciesBin = spectrogram.numberOfFreqs;
 
     int zoomedTimeBin = timeBin.floor();
@@ -42,7 +58,7 @@ class SpectrogramWidgetPainter extends CustomPainter {
     // Calculate the starting and ending indices for the visible time bins
     int visibleTimeStart = centerTimeBin - zoomedTimeBin ~/ 2;
     int visibleTimeEnd = centerTimeBin + (zoomedTimeBin + 1) ~/ 2;
-    final cellWidth = width / zoomedTimeBin;
+    final cellWidth = width / nt;
     final cellHeight = height / (freqBins);
 
     //final zoomedSeconds = 2 * (spectrogram.tmax / (2.0 * zoom));
@@ -51,8 +67,8 @@ class SpectrogramWidgetPainter extends CustomPainter {
     double minFreq = spectrogram.powerSpectrumDensity[0][0];
     double maxFreq = spectrogram.powerSpectrumDensity[0][0];
 
-    for (int t = visibleTimeStart; t < visibleTimeEnd; ++t) {
-      for (int f = 0; f < freqBins; ++f) {
+    for (int t = 0; t < nt; ++t) {
+      for (int f = 0; f < nf; ++f) {
         final v = spectrogram.powerSpectrumDensity[t][f];
 
         if (v < minFreq) {
@@ -72,7 +88,11 @@ class SpectrogramWidgetPainter extends CustomPainter {
       gradient.max = maxFreq;
     }
 
-    for (int t = visibleTimeStart; t < visibleTimeEnd; t++) {
+    double colToX(double col) =>
+        spectrogram.centerOfFirstTimeSlice +
+        (col - 1.0) * spectrogram.timeBetweenTimeSlices;
+
+    for (int t = itmin; t < itmax; t++) {
       for (int f = 0; f < freqBins; f++) {
         // Power
         double intensity = spectrogram.powerSpectrumDensity[t][f];
@@ -88,9 +108,9 @@ class SpectrogramWidgetPainter extends CustomPainter {
         // +1 and -1 on both x and y of the second offset
         // is just to removed those lines between rectangles
         final rect = Rect.fromPoints(
-          Offset((t - visibleTimeStart) * cellWidth, height - f * cellHeight),
+          Offset((t) * cellWidth, height - f * cellHeight),
           Offset(
-            ((t - visibleTimeStart + 1) * cellWidth).ceilToDouble(),
+            ((t + 1) * cellWidth).ceilToDouble(),
             (height - (f + 1) * cellHeight).floorToDouble(),
           ),
         );

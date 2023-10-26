@@ -102,8 +102,8 @@ class SpectrogramBuilder {
       );
     }
 
-    final int numberOfTimes = 1 +
-        ((physicalDuration - physicalAnalysisWidth) / timeStep).floor(); // >= 1
+    final int numberOfTimes =
+        ((physicalDuration - physicalAnalysisWidth) / timeStep).floor(); // >= 0
 
     // Center of first frame
     final t1 = sound.timeOfFirstSample +
@@ -188,7 +188,7 @@ class SpectrogramBuilder {
     return Spectrogram(
       tmin: sound.xmin,
       tmax: sound.xmax,
-      numberOfTimeSlices: numberOfTimes,
+      numberOfTimeSlices: logBinnedData.length,
       timeBetweenTimeSlices: timeStep,
       centerOfFirstTimeSlice: t1,
       minFrequencyHz: 0.0,
