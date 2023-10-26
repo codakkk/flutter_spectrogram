@@ -8,12 +8,21 @@ class SpectrogramWidget extends StatefulWidget {
     super.key,
     required this.spectrogram,
     required this.size,
-    this.zoom = 1.0,
+    required this.tmin,
+    required this.tmax,
+    required this.fmin,
+    required this.fmax,
     this.applyDynamicRange = false,
   });
 
   final Spectrogram spectrogram;
-  final double zoom;
+
+  final double tmin;
+  final double tmax;
+
+  final double fmin;
+  final double fmax;
+
   final Size size;
   final bool applyDynamicRange;
 
@@ -28,8 +37,11 @@ class _SpectrogramWidgetState extends State<SpectrogramWidget> {
       size: widget.size,
       painter: SpectrogramWidgetPainter(
         spectrogram: widget.spectrogram,
-        zoom: widget.zoom,
         applyDynamicRange: widget.applyDynamicRange,
+        tmin: widget.tmin,
+        tmax: widget.tmax,
+        fmin: widget.fmin,
+        fmax: widget.fmax,
       ),
     );
   }

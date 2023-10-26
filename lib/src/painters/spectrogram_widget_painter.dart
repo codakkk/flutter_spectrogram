@@ -6,12 +6,19 @@ import '../models/spectrogram.dart';
 class SpectrogramWidgetPainter extends CustomPainter {
   const SpectrogramWidgetPainter({
     required this.spectrogram,
-    required this.zoom,
+    required this.tmin,
+    required this.tmax,
+    required this.fmin,
+    required this.fmax,
     this.applyDynamicRange = false,
   });
 
   final Spectrogram spectrogram;
-  final double zoom;
+
+  final double tmin;
+  final double tmax;
+  final double fmin;
+  final double fmax;
 
   final bool applyDynamicRange;
 
@@ -26,7 +33,7 @@ class SpectrogramWidgetPainter extends CustomPainter {
     final timeBin = spectrogram.powerSpectrumDensity.length;
     final frequenciesBin = spectrogram.numberOfFreqs;
 
-    int zoomedTimeBin = (timeBin / zoom).floor();
+    int zoomedTimeBin = timeBin.floor();
     // Calculate the center point
     int centerTimeBin = timeBin ~/ 2;
 

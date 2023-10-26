@@ -70,8 +70,6 @@ class _MainAppState extends State<MainApp> {
   }
 
   Future<Spectrogram> _generateSpectrogram() async {
-    final width = MediaQuery.of(context).size.width;
-
     final root = await rootBundle.load('assets/audio.wav');
     final wav = Wav.read(root.buffer.asUint8List());
 
@@ -131,7 +129,10 @@ class _MainAppState extends State<MainApp> {
                 ? SpectrogramWidget(
                     size: size,
                     spectrogram: _spectrogram!,
-                    zoom: _zoom,
+                    tmin: _spectrogram!.tmin,
+                    tmax: _spectrogram!.tmax,
+                    fmin: _spectrogram!.minFrequencyHz,
+                    fmax: _spectrogram!.maxFrequencyHz,
                     applyDynamicRange: false,
                   )
                 : const CircularProgressIndicator()
