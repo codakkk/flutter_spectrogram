@@ -40,28 +40,26 @@ class Sound with _$Sound {
     @Default(1) int ymin, // Left or only channel
     required int ymax, // right or only channels
     required int numberOfChannels, // ny
-    required Float64List monoAmplitudes,
     required List<Float64List> amplitudes, // z
-    // List of List<double> because it's based on multiple channels. We usally expect a mono sound
   }) = _Sound;
 
   static Sound fromWav(Wav wav) {
-    final mono = wav.toMono();
     final duration = wav.duration;
 
+    final nOfSamples = wav.channels[0].length;
     final samplingRate = wav.samplesPerSecond;
     final samplingPeriod = 1.0 / samplingRate; // samplingTime
+
     return Sound(
       xmin: 0.0,
       xmax: duration,
-      numberOfSamples: wav.channels[0].length,
+      numberOfSamples: nOfSamples,
       samplingPeriod: samplingPeriod,
-      timeOfFirstSample: 0.5 / samplingPeriod,
+      timeOfFirstSample: 0.5 * samplingPeriod,
       ymin: 1,
       ymax: 0,
       numberOfChannels: wav.channels.length,
       amplitudes: wav.channels,
-      monoAmplitudes: mono,
     );
   }
 
@@ -72,13 +70,15 @@ class Sound with _$Sound {
     required double relativeWidth,
     required bool preserveTimes,
   }) {
-    // Window should be rectangular lol
     // Function_unidirectionalAutowindow
     if (tmin >= tmax) {
       tmin = sound.xmin;
       tmax = sound.xmax;
     }
 
+    /*
+			Should allow window tails outside specified domain.
+		*/
     if (relativeWidth != 1.0) {
       final double margin = 0.5 * (relativeWidth - 1) * (tmax - tmin);
       tmin -= margin;
@@ -89,9 +89,9 @@ class Sound with _$Sound {
 			Determine index range. We use all the real or virtual samples that fit within [t1..t2].
 		*/
     final int itmin =
-        1 + ((tmin - sound.timeOfFirstSample) / sound.samplingPeriod).ceil();
+        ((tmin - sound.timeOfFirstSample) / sound.samplingPeriod).ceil();
     final int itmax =
-        1 + ((tmax - sound.timeOfFirstSample) / sound.samplingPeriod).floor();
+        ((tmax - sound.timeOfFirstSample) / sound.samplingPeriod).floor();
 
     if (itmin > itmax) {
       throw Exception('Extracted Sound would contain no samples.');
@@ -112,7 +112,6 @@ class Sound with _$Sound {
         sound.numberOfChannels,
         Float64List(numberOfSamples),
       ),
-      monoAmplitudes: Float64List(numberOfSamples),
     );
 
     //
@@ -125,21 +124,12 @@ class Sound with _$Sound {
     }
 
     for (int channel = 0; channel < extracted.numberOfChannels; ++channel) {
-      final clippedItMin = itmin < 1 ? 1 : itmin;
-      final clippedItMax =
-          itmax > sound.numberOfSamples ? sound.numberOfSamples : itmax;
-      final row = extracted.amplitudes[channel].sublist(
-        1 - itmin + clippedItMin,
-        1 - itmin + clippedItMax,
-      );
-      final toCopy = row.sublist(clippedItMin, clippedItMax);
+      final clippedItMin = itmin < 0 ? 0 : itmin;
+      final row = extracted.amplitudes[channel];
 
       for (int i = 0; i < row.length; ++i) {
-        row[i] = toCopy[i];
+        row[i] = sound.amplitudes[channel][clippedItMin + i];
       }
-
-      //thy z.row (ichan).part (1 - itmin + itmin_clipped, 1 - itmin + itmax_clipped)
-      // <<=  my z.row (ichan).part (itmin_clipped, itmax_clipped);
     }
     return extracted;
   }

@@ -123,14 +123,14 @@ class SpectrogramBuilder {
       return Spectrogram.zero;
     }
 
-    int nSampFFT = 1;
+    int nSampFFT = 1; // (44100 * _effectiveAnalysisWidth).floor();
 
     while (nSampFFT < nSampWindow ||
         nSampFFT < 2 * numberOfFreqs * (nyquist / _frequencyMax)) {
       nSampFFT *= 2;
     }
 
-    final int halfNSampFFT = nSampFFT ~/ 2;
+    final int halfNSampFFT = nSampFFT ~/ 2; // (44100 * 0.0025).toInt();
 
     final binWidthSamples =
         math.max(1, (freqStep * sound.samplingPeriod * nSampFFT)).floor();
@@ -159,7 +159,7 @@ class SpectrogramBuilder {
     //const buckets = 120;
 
     stft.run(
-      sound.monoAmplitudes,
+      sound.amplitudes[0],
       (chunk) {
         // Each time we get a new chunk, add a row to the matrix.
         List<double> chunkPowers = [];

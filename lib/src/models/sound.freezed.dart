@@ -26,7 +26,6 @@ mixin _$Sound {
   int get ymin => throw _privateConstructorUsedError; // Left or only channel
   int get ymax => throw _privateConstructorUsedError; // right or only channels
   int get numberOfChannels => throw _privateConstructorUsedError; // ny
-  Float64List get monoAmplitudes => throw _privateConstructorUsedError;
   List<Float64List> get amplitudes => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
@@ -47,7 +46,6 @@ abstract class $SoundCopyWith<$Res> {
       int ymin,
       int ymax,
       int numberOfChannels,
-      Float64List monoAmplitudes,
       List<Float64List> amplitudes});
 }
 
@@ -72,7 +70,6 @@ class _$SoundCopyWithImpl<$Res, $Val extends Sound>
     Object? ymin = null,
     Object? ymax = null,
     Object? numberOfChannels = null,
-    Object? monoAmplitudes = null,
     Object? amplitudes = null,
   }) {
     return _then(_value.copyWith(
@@ -108,10 +105,6 @@ class _$SoundCopyWithImpl<$Res, $Val extends Sound>
           ? _value.numberOfChannels
           : numberOfChannels // ignore: cast_nullable_to_non_nullable
               as int,
-      monoAmplitudes: null == monoAmplitudes
-          ? _value.monoAmplitudes
-          : monoAmplitudes // ignore: cast_nullable_to_non_nullable
-              as Float64List,
       amplitudes: null == amplitudes
           ? _value.amplitudes
           : amplitudes // ignore: cast_nullable_to_non_nullable
@@ -136,7 +129,6 @@ abstract class _$$SoundImplCopyWith<$Res> implements $SoundCopyWith<$Res> {
       int ymin,
       int ymax,
       int numberOfChannels,
-      Float64List monoAmplitudes,
       List<Float64List> amplitudes});
 }
 
@@ -159,7 +151,6 @@ class __$$SoundImplCopyWithImpl<$Res>
     Object? ymin = null,
     Object? ymax = null,
     Object? numberOfChannels = null,
-    Object? monoAmplitudes = null,
     Object? amplitudes = null,
   }) {
     return _then(_$SoundImpl(
@@ -195,10 +186,6 @@ class __$$SoundImplCopyWithImpl<$Res>
           ? _value.numberOfChannels
           : numberOfChannels // ignore: cast_nullable_to_non_nullable
               as int,
-      monoAmplitudes: null == monoAmplitudes
-          ? _value.monoAmplitudes
-          : monoAmplitudes // ignore: cast_nullable_to_non_nullable
-              as Float64List,
       amplitudes: null == amplitudes
           ? _value._amplitudes
           : amplitudes // ignore: cast_nullable_to_non_nullable
@@ -209,7 +196,7 @@ class __$$SoundImplCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$SoundImpl implements _Sound {
+class _$SoundImpl extends _Sound {
   const _$SoundImpl(
       {required this.xmin,
       required this.xmax,
@@ -219,9 +206,9 @@ class _$SoundImpl implements _Sound {
       this.ymin = 1,
       required this.ymax,
       required this.numberOfChannels,
-      required this.monoAmplitudes,
       required final List<Float64List> amplitudes})
-      : _amplitudes = amplitudes;
+      : _amplitudes = amplitudes,
+        super._();
 
   @override
   final double xmin;
@@ -248,9 +235,8 @@ class _$SoundImpl implements _Sound {
   @override
   final int numberOfChannels;
 // ny
-  @override
-  final Float64List monoAmplitudes;
   final List<Float64List> _amplitudes;
+// ny
   @override
   List<Float64List> get amplitudes {
     if (_amplitudes is EqualUnmodifiableListView) return _amplitudes;
@@ -260,7 +246,7 @@ class _$SoundImpl implements _Sound {
 
   @override
   String toString() {
-    return 'Sound(xmin: $xmin, xmax: $xmax, numberOfSamples: $numberOfSamples, samplingPeriod: $samplingPeriod, timeOfFirstSample: $timeOfFirstSample, ymin: $ymin, ymax: $ymax, numberOfChannels: $numberOfChannels, monoAmplitudes: $monoAmplitudes, amplitudes: $amplitudes)';
+    return 'Sound(xmin: $xmin, xmax: $xmax, numberOfSamples: $numberOfSamples, samplingPeriod: $samplingPeriod, timeOfFirstSample: $timeOfFirstSample, ymin: $ymin, ymax: $ymax, numberOfChannels: $numberOfChannels, amplitudes: $amplitudes)';
   }
 
   @override
@@ -281,8 +267,6 @@ class _$SoundImpl implements _Sound {
             (identical(other.numberOfChannels, numberOfChannels) ||
                 other.numberOfChannels == numberOfChannels) &&
             const DeepCollectionEquality()
-                .equals(other.monoAmplitudes, monoAmplitudes) &&
-            const DeepCollectionEquality()
                 .equals(other._amplitudes, _amplitudes));
   }
 
@@ -297,7 +281,6 @@ class _$SoundImpl implements _Sound {
       ymin,
       ymax,
       numberOfChannels,
-      const DeepCollectionEquality().hash(monoAmplitudes),
       const DeepCollectionEquality().hash(_amplitudes));
 
   @JsonKey(ignore: true)
@@ -307,7 +290,7 @@ class _$SoundImpl implements _Sound {
       __$$SoundImplCopyWithImpl<_$SoundImpl>(this, _$identity);
 }
 
-abstract class _Sound implements Sound {
+abstract class _Sound extends Sound {
   const factory _Sound(
       {required final double xmin,
       required final double xmax,
@@ -317,8 +300,8 @@ abstract class _Sound implements Sound {
       final int ymin,
       required final int ymax,
       required final int numberOfChannels,
-      required final Float64List monoAmplitudes,
       required final List<Float64List> amplitudes}) = _$SoundImpl;
+  const _Sound._() : super._();
 
   @override
   double get xmin;
@@ -337,8 +320,6 @@ abstract class _Sound implements Sound {
   @override // right or only channels
   int get numberOfChannels;
   @override // ny
-  Float64List get monoAmplitudes;
-  @override
   List<Float64List> get amplitudes;
   @override
   @JsonKey(ignore: true)

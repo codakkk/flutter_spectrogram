@@ -20,28 +20,6 @@ class SpectrogramWidgetPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final gradient = ColourGradient.whiteBlack();
 
-    double minFreq = spectrogram.powerSpectrumDensity[0][0];
-    double maxFreq = spectrogram.powerSpectrumDensity[0][0];
-
-    for (var row in spectrogram.powerSpectrumDensity) {
-      for (var value in row) {
-        if (value < minFreq) {
-          minFreq = value;
-        }
-        if (value > maxFreq) {
-          maxFreq = value;
-        }
-      }
-    }
-
-    if (applyDynamicRange) {
-      gradient.min = 0.0;
-      gradient.max = 1.0;
-    } else {
-      gradient.min = minFreq;
-      gradient.max = maxFreq;
-    }
-
     final width = size.width;
     final height = size.height;
 
@@ -62,6 +40,30 @@ class SpectrogramWidgetPainter extends CustomPainter {
 
     //final zoomedSeconds = 2 * (spectrogram.tmax / (2.0 * zoom));
     // spectrogram.powerSpectrumDensity[0].length;
+
+    double minFreq = spectrogram.powerSpectrumDensity[0][0];
+    double maxFreq = spectrogram.powerSpectrumDensity[0][0];
+
+    for (int t = visibleTimeStart; t < visibleTimeEnd; ++t) {
+      for (int f = 0; f < freqBins; ++f) {
+        final v = spectrogram.powerSpectrumDensity[t][f];
+
+        if (v < minFreq) {
+          minFreq = v;
+        }
+        if (v > maxFreq) {
+          maxFreq = v;
+        }
+      }
+    }
+
+    if (applyDynamicRange) {
+      gradient.min = 0.0;
+      gradient.max = 1.0;
+    } else {
+      gradient.min = minFreq;
+      gradient.max = maxFreq;
+    }
 
     for (int t = visibleTimeStart; t < visibleTimeEnd; t++) {
       for (int f = 0; f < freqBins; f++) {
