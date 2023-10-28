@@ -206,40 +206,32 @@ class SpectrogramWidgetPainter extends CustomPainter {
         // we just render up-side down
         // +1 and -1 on both x and y of the second offset
         // is just to removed those lines between rectangles
-        final rect = Rect.fromPoints(
-          Offset((t) * cellWidth, height - f * cellHeight),
-          Offset(
-            ((t + 1) * cellWidth).ceilToDouble(),
-            height - (f + 1) * cellHeight,
-          ),
-        );
-
-        final topLeft = rect.topLeft;
-        final topRight = rect.topRight;
-        final bottomLeft = rect.bottomLeft;
-        final bottomRight = rect.bottomRight;
+        final top = height - f * cellHeight;
+        final bottom = height - (f + 1) * cellHeight;
+        final left = t * cellWidth;
+        final right = (t + 1) * cellWidth;
 
         final baseIndex = (t + f * nt) * 12;
 
         // Top-Left vertex
-        positions[baseIndex + 0] = topLeft.dx;
-        positions[baseIndex + 1] = topLeft.dy;
+        positions[baseIndex + 0] = left;
+        positions[baseIndex + 1] = top;
 
         // Top-Right vertex
-        positions[baseIndex + 2] = topRight.dx;
-        positions[baseIndex + 3] = topRight.dy;
+        positions[baseIndex + 2] = right;
+        positions[baseIndex + 3] = top;
         // Bottom-Left vertex
-        positions[baseIndex + 4] = bottomLeft.dx;
-        positions[baseIndex + 5] = bottomLeft.dy;
+        positions[baseIndex + 4] = left;
+        positions[baseIndex + 5] = bottom;
         // Bottom-Right vertex
-        positions[baseIndex + 6] = bottomRight.dx;
-        positions[baseIndex + 7] = bottomRight.dy;
+        positions[baseIndex + 6] = right;
+        positions[baseIndex + 7] = top;
         // Top-Right vertex
-        positions[baseIndex + 8] = topRight.dx;
-        positions[baseIndex + 9] = topRight.dy;
+        positions[baseIndex + 8] = right;
+        positions[baseIndex + 9] = bottom;
         // Bottom-Left vertex
-        positions[baseIndex + 10] = bottomLeft.dx;
-        positions[baseIndex + 11] = bottomLeft.dy;
+        positions[baseIndex + 10] = left;
+        positions[baseIndex + 11] = bottom;
 
         final colorBaseIndex = (t + f * nt) * 6;
         colors[colorBaseIndex + 0] = color.value;
