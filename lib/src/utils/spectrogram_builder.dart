@@ -130,7 +130,7 @@ class SpectrogramBuilder {
       nSampFFT *= 2;
     }
 
-    final int halfNSampFFT = nSampFFT ~/ 2; // (44100 * 0.0025).toInt();
+    final int halfNSampFFT = 32; // nSampFFT ~/ 32; // (44100 * 0.0025).toInt();
 
     final binWidthSamples =
         math.max(1, (freqStep * sound.samplingPeriod * nSampFFT)).floor();
@@ -178,7 +178,7 @@ class SpectrogramBuilder {
             power /= i1 - i0;
 
             // Add data to the row.
-            chunkPowers.add(math.log(power));
+            chunkPowers.add(power);
           }
           i0 = i1;
         }

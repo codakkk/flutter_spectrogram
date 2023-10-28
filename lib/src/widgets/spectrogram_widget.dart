@@ -12,7 +12,12 @@ class SpectrogramWidget extends StatefulWidget {
     required this.tmax,
     required this.fmin,
     required this.fmax,
-    this.applyDynamicRange = false,
+    this.applyDynamicRange = true,
+    this.dynamic = 70.0,
+    this.maximum = 100.0,
+    this.autoscaling = true,
+    this.preemphasis = 6.0,
+    this.dynamicCompression = 0.0,
   });
 
   final Spectrogram spectrogram;
@@ -24,7 +29,14 @@ class SpectrogramWidget extends StatefulWidget {
   final double fmax;
 
   final Size size;
+
   final bool applyDynamicRange;
+  final bool autoscaling;
+
+  final double dynamic; // dB
+  final double maximum; // dB/Hz
+  final double preemphasis; // dB/oct
+  final double dynamicCompression; // [0, 1]
 
   @override
   State<SpectrogramWidget> createState() => _SpectrogramWidgetState();
@@ -37,7 +49,6 @@ class _SpectrogramWidgetState extends State<SpectrogramWidget> {
       size: widget.size,
       painter: SpectrogramWidgetPainter(
         spectrogram: widget.spectrogram,
-        applyDynamicRange: widget.applyDynamicRange,
         tmin: widget.tmin,
         tmax: widget.tmax,
         fmin: widget.fmin,
