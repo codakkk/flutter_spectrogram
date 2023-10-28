@@ -9,7 +9,7 @@ import '../models/colour_gradient.dart';
 import '../models/spectrogram.dart';
 
 class SpectrogramWidgetPainter extends CustomPainter {
-  const SpectrogramWidgetPainter({
+  SpectrogramWidgetPainter({
     required this.spectrogram,
     required this.tmin,
     required this.tmax,
@@ -38,6 +38,12 @@ class SpectrogramWidgetPainter extends CustomPainter {
   final double dynamicCompression; // [0, 1]
 
   final bool useCustomShader;
+
+  // Those shouldn't be static
+  // but who knows, CustomPainters are recreated each time
+  // they're built lol
+  static Float32List? _positionsBuffer;
+  static Int32List? _colorsBuffer;
 
   /*double colToX(double col) =>
         spectrogram.centerOfFirstTimeSlice +
@@ -76,14 +82,18 @@ class SpectrogramWidgetPainter extends CustomPainter {
 
     const e1 = 1 / (1e30);
     const e2 = 4 / (1e10);
+    const numLN10 = 2.302585092994046;
+    const numLN2 = 0.6931471805599453;
+
+    /* Pre-emphasis; also compute maximum after pre-emphasis. -*/
     for (int ifreq = 0; ifreq < nf; ++ifreq) {
-      final preemphasisFactor = (preemphasis / 0.6931471805599453) *
+      final preemphasisFactor = (preemphasis / numLN2) *
           math.log((ifreq + 1) * spectrogram.frequencyStepHz / 1000.0);
       for (int itime = 0; itime < nt; ++itime) {
         double power = workedPower[itime][ifreq];
 
         double tl = math.log(((power + e1) / e2));
-        power = (10 / 2.302585092994046) * tl + preemphasisFactor; // dB
+        power = (10 / numLN10) * tl + preemphasisFactor; // dB
 
         // power = 10 * (math.log(power) / math.ln10);
         if (power > dynamicFactor[itime]) {
@@ -94,6 +104,7 @@ class SpectrogramWidgetPainter extends CustomPainter {
       }
     }
 
+    /* Compute global maximum. */
     if (autoscaling) {
       currentMaximum = 0.0;
       for (int itime = 0; itime < nt; ++itime) {
@@ -114,7 +125,6 @@ class SpectrogramWidgetPainter extends CustomPainter {
 
     gradient.min = currentMaximum - dynamic;
     gradient.max = currentMaximum;
-    debugPrint('MinMax: ${gradient.min} - ${gradient.max}\nNT: $nt');
 
     if (useCustomShader) {
       _newRendering(
@@ -192,8 +202,19 @@ class SpectrogramWidgetPainter extends CustomPainter {
     final cellWidth = width / nt;
     final cellHeight = height / nf;
 
-    final positions = Float32List(nt * nf * 6 * 2);
-    final colors = Int32List(nt * nf * 6);
+    int positionsSize = nt * nf * 6 * 2;
+    int colorsSize = nt * nf * 6;
+
+    if (_positionsBuffer == null || _positionsBuffer!.length < positionsSize) {
+      _positionsBuffer = Float32List(positionsSize);
+    }
+
+    if (_colorsBuffer == null || _colorsBuffer!.length < colorsSize) {
+      _colorsBuffer = Int32List(colorsSize);
+    }
+
+    final positions = _positionsBuffer!;
+    final colors = _colorsBuffer!;
 
     for (int t = 0; t < nt; ++t) {
       for (int f = 0; f < nf; ++f) {
@@ -244,8 +265,8 @@ class SpectrogramWidgetPainter extends CustomPainter {
     }
     final vertices = Vertices.raw(
       VertexMode.triangles,
-      positions,
-      colors: colors,
+      Float32List.sublistView(_positionsBuffer!, 0, positionsSize),
+      colors: Int32List.sublistView(_colorsBuffer!, 0, colorsSize),
     );
     canvas.drawVertices(
       vertices,
@@ -256,7 +277,7 @@ class SpectrogramWidgetPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(SpectrogramWidgetPainter oldDelegate) {
-    return oldDelegate.fmin != fmin ||
+    final r = oldDelegate.fmin != fmin ||
         oldDelegate.fmax != fmax ||
         oldDelegate.tmin != tmin ||
         oldDelegate.tmax != tmax ||
@@ -264,5 +285,6 @@ class SpectrogramWidgetPainter extends CustomPainter {
         oldDelegate.dynamic != dynamic ||
         oldDelegate.autoscaling != autoscaling ||
         oldDelegate.dynamicCompression != dynamicCompression;
+    return r;
   }
 }
