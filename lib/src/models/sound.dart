@@ -43,6 +43,33 @@ class Sound with _$Sound {
     required List<Float64List> amplitudes, // z
   }) = _Sound;
 
+  (int nt, int itmin, int itmax) getWindowSamples(double xmin, double xmax) {
+    final ixminReal =
+        ((xmin - timeOfFirstSample) / samplingPeriod).ceilToDouble();
+    final ixmaxReal =
+        ((xmax - timeOfFirstSample) / samplingPeriod).floorToDouble();
+
+    final itmin = ixminReal < 0.0 ? 0 : ixminReal.toInt();
+    final itmax = ixmaxReal > numberOfSamples.toDouble()
+        ? numberOfSamples
+        : ixmaxReal.toInt();
+
+    int nt = itmin > itmax ? 0 : itmax - itmin;
+    return (nt, itmin, itmax);
+  }
+
+  double indexToX(int index) => timeOfFirstSample + index * samplingPeriod;
+  double xToIndex(double x) => (x - timeOfFirstSample) / samplingPeriod;
+
+  int xToLowIndex(double x) =>
+      ((x - timeOfFirstSample) / samplingPeriod).floor();
+
+  int xToHighIndex(double x) =>
+      ((x - timeOfFirstSample) / samplingPeriod).ceil();
+
+  int xToNearestIndex(double x) =>
+      ((x - timeOfFirstSample) / samplingPeriod).round();
+
   static Sound fromWav(Wav wav) {
     final duration = wav.duration;
 

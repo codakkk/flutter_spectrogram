@@ -1,9 +1,7 @@
-import 'dart:typed_data';
-import 'dart:ui';
-
-import 'package:flutter/material.dart';
-
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
 
 import '../models/colour_gradient.dart';
 import '../models/spectrogram.dart';
@@ -15,12 +13,14 @@ class SpectrogramWidgetPainter extends CustomPainter {
     required this.tmax,
     required this.fmin,
     required this.fmax,
+    required this.lineColor,
     this.dynamic = 70.0,
     this.maximum = 100.0,
     this.autoscaling = true,
     this.preemphasis = 6.0,
     this.dynamicCompression = 0.0,
     this.useCustomShader = true,
+    this.selectedFrequency = 0,
   });
 
   final Spectrogram spectrogram;
@@ -30,6 +30,8 @@ class SpectrogramWidgetPainter extends CustomPainter {
   final double fmin;
   final double fmax;
 
+  final int selectedFrequency;
+
   final bool autoscaling;
 
   final double dynamic; // dB
@@ -38,6 +40,8 @@ class SpectrogramWidgetPainter extends CustomPainter {
   final double dynamicCompression; // [0, 1]
 
   final bool useCustomShader;
+
+  final Color lineColor;
 
   // Those shouldn't be static
   // but who knows, CustomPainters are recreated each time
@@ -64,6 +68,7 @@ class SpectrogramWidgetPainter extends CustomPainter {
       tmax + 0.49999 * spectrogram.timeBetweenTimeSlices,
     );
 
+    // ignore: unused_local_variable
     final (nf, ifmin, ifmax) = spectrogram.getWindowSamplesY(
       fmin - 0.49999 * spectrogram.frequencyStepHz,
       fmax + 0.49999 * spectrogram.frequencyStepHz,
@@ -263,7 +268,7 @@ class SpectrogramWidgetPainter extends CustomPainter {
         colors[colorBaseIndex + 5] = color.value;
       }
     }
-    final vertices = Vertices.raw(
+    final vertices = ui.Vertices.raw(
       VertexMode.triangles,
       Float32List.sublistView(_positionsBuffer!, 0, positionsSize),
       colors: Int32List.sublistView(_colorsBuffer!, 0, colorsSize),
@@ -273,6 +278,18 @@ class SpectrogramWidgetPainter extends CustomPainter {
       BlendMode.dstIn,
       Paint()..style = PaintingStyle.fill,
     );
+
+    if (selectedFrequency >= fmin && selectedFrequency <= fmax) {
+      final y = size.height - (selectedFrequency / fmax) * size.height;
+      debugPrint(y.toString());
+
+      drawDashedLine(
+        canvas: canvas,
+        p1: Offset(0.0, y),
+        p2: Offset(size.width, y),
+        paint: Paint()..color = lineColor,
+      );
+    }
   }
 
   @override
@@ -286,5 +303,28 @@ class SpectrogramWidgetPainter extends CustomPainter {
         oldDelegate.autoscaling != autoscaling ||
         oldDelegate.dynamicCompression != dynamicCompression;
     return r;
+  }
+
+  static void drawDashedLine({
+    required Canvas canvas,
+    required Offset p1,
+    required Offset p2,
+    required Paint paint,
+    Iterable<double> pattern = const [6, 3],
+  }) {
+    assert(pattern.length.isEven);
+    final distance = (p2 - p1).distance;
+    final normalizedPattern = pattern.map((width) => width / distance).toList();
+    final points = <Offset>[];
+    double t = 0;
+    int i = 0;
+    while (t < 1) {
+      points.add(Offset.lerp(p1, p2, t)!);
+      t += normalizedPattern[i++]; // dashWidth
+      points.add(Offset.lerp(p1, p2, t.clamp(0, 1))!);
+      t += normalizedPattern[i++]; // dashSpace
+      i %= normalizedPattern.length;
+    }
+    canvas.drawPoints(ui.PointMode.lines, points, paint);
   }
 }

@@ -12,11 +12,13 @@ class SpectrogramWidget extends StatefulWidget {
     required this.tmax,
     required this.fmin,
     required this.fmax,
+    required this.lineColor,
     this.dynamic = 70.0,
     this.maximum = 100.0,
     this.autoscaling = true,
     this.preemphasis = 6.0,
     this.dynamicCompression = 0.0,
+    this.selectedFrequency = 0,
   });
 
   final Spectrogram spectrogram;
@@ -26,6 +28,9 @@ class SpectrogramWidget extends StatefulWidget {
 
   final double fmin;
   final double fmax;
+
+  final int selectedFrequency;
+  final Color lineColor;
 
   final Size size;
 
@@ -43,19 +48,50 @@ class SpectrogramWidget extends StatefulWidget {
 class _SpectrogramWidgetState extends State<SpectrogramWidget> {
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: widget.size,
-      painter: SpectrogramWidgetPainter(
-        spectrogram: widget.spectrogram,
-        tmin: widget.tmin,
-        tmax: widget.tmax,
-        fmin: widget.fmin,
-        fmax: widget.fmax,
-        dynamic: widget.dynamic,
-        maximum: widget.maximum,
-        preemphasis: widget.preemphasis,
-        dynamicCompression: widget.dynamicCompression,
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text('${widget.fmax} Hz'),
+            const SizedBox(width: 16),
+            Text(
+              '${widget.selectedFrequency} Hz',
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+            ),
+            const Spacer(),
+            const Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'Derived Spectrogram',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w300,
+                ),
+              ),
+            ),
+          ],
+        ),
+        CustomPaint(
+          size: widget.size,
+          painter: SpectrogramWidgetPainter(
+            spectrogram: widget.spectrogram,
+            tmin: widget.tmin,
+            tmax: widget.tmax,
+            fmin: widget.fmin,
+            fmax: widget.fmax,
+            dynamic: widget.dynamic,
+            maximum: widget.maximum,
+            preemphasis: widget.preemphasis,
+            dynamicCompression: widget.dynamicCompression,
+            selectedFrequency: widget.selectedFrequency,
+            lineColor: widget.lineColor,
+          ),
+        ),
+        Text('${widget.fmin} Hz'),
+      ],
     );
   }
 }
