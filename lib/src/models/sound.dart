@@ -70,6 +70,29 @@ class Sound with _$Sound {
   int xToNearestIndex(double x) =>
       ((x - timeOfFirstSample) / samplingPeriod).round();
 
+  (int numberOfFrames, double firstTime) shortTermAnalysis(
+    double windowDuration,
+    double timeStep,
+  ) {
+    assert(windowDuration > 0.0);
+    assert(timeStep > 0.0);
+    double myDuration = samplingPeriod *
+        numberOfSamples; // volatile, because we need to truncate to 64 bits
+    if (windowDuration > myDuration) {
+      throw Exception(": shorter than window length.");
+    }
+
+    int numberOfFrames = ((myDuration - windowDuration) / timeStep).floor() + 1;
+    assert(numberOfFrames >= 1);
+
+    double ourMidTime =
+        timeOfFirstSample - 0.5 * samplingPeriod + 0.5 * myDuration;
+    double thyDuration = numberOfFrames * timeStep;
+    double firstTime = ourMidTime - 0.5 * thyDuration + 0.5 * timeStep;
+
+    return (numberOfFrames, firstTime);
+  }
+
   static Sound fromWav(Wav wav) {
     final duration = wav.duration;
 
