@@ -122,7 +122,7 @@ class SpectrogramBuilder {
       return Spectrogram.zero;
     }
 
-    int nSampFFT = 1; // (44100 * _effectiveAnalysisWidth).floor();
+    int nSampFFT = 1;
 
     while (nSampFFT < nSampWindow ||
         nSampFFT < 2 * numberOfFreqs * (nyquist / _frequencyMax)) {
@@ -130,13 +130,13 @@ class SpectrogramBuilder {
     }
 
     final int halfNSampFFT =
-        nSampFFT ~/ 32; // nSampFFT ~/ 32; // (44100 * 0.0025).toInt();
+        nSampFFT ~/ 2; // nSampFFT ~/ 32; // (44100 * 0.0025).toInt();
 
     final binWidthSamples =
         math.max(1, (freqStep * sound.samplingPeriod * nSampFFT)).floor();
     final binWidthHertz = 1.0 / (sound.samplingPeriod * nSampFFT);
     freqStep = binWidthSamples * binWidthHertz;
-    numberOfFreqs = (_frequencyMax / freqStep).floor() * 2;
+    numberOfFreqs = (_frequencyMax / freqStep).floor();
 
     if (numberOfFreqs < 1) {
       return Spectrogram.zero;
@@ -165,7 +165,7 @@ class SpectrogramBuilder {
         List<double> chunkPowers = [];
         logBinnedData.add(chunkPowers);
 
-        final amp = chunk.discardConjugates().magnitudes();
+        final amp = chunk.discardConjugates().squareMagnitudes();
         logItr ??= linSpace(amp.length, numberOfFreqs);
 
         int i0 = 0;

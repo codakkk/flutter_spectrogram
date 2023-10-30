@@ -89,18 +89,16 @@ class SpectrogramWidgetPainter extends CustomPainter {
 
     const e1 = 1 / (1e30);
     const e2 = 4 / (1e10);
-    const numLN10 = 2.302585092994046;
-    const numLN2 = 0.6931471805599453;
 
     /* Pre-emphasis; also compute maximum after pre-emphasis. -*/
     for (int ifreq = 0; ifreq < nf; ++ifreq) {
-      final preemphasisFactor = (preemphasis / numLN2) *
+      final preemphasisFactor = (preemphasis / math.ln2) *
           math.log((ifreq + 1) * spectrogram.frequencyStepHz / 1000.0);
       for (int itime = 0; itime < nt; ++itime) {
         double power = workedPower[itime][ifreq];
 
         double tl = math.log(((power + e1) / e2));
-        power = (10 / numLN10) * tl + preemphasisFactor; // dB
+        power = (10 / math.ln10) * tl + preemphasisFactor; // dB
 
         // power = 10 * (math.log(power) / math.ln10);
         if (power > dynamicFactor[itime]) {
@@ -235,14 +233,6 @@ class SpectrogramWidgetPainter extends CustomPainter {
         final left = t * cellWidth;
         final right = (t + 1) * cellWidth;
 
-        if (left < 0) {
-          debugPrint('Left: $left');
-        }
-
-        if (right > size.width) {
-          debugPrint('Right: $right');
-        }
-
         final baseIndex = (t + f * nt) * 12;
 
         // Top-Left vertex
@@ -266,12 +256,9 @@ class SpectrogramWidgetPainter extends CustomPainter {
         positions[baseIndex + 11] = bottom;
 
         final colorBaseIndex = (t + f * nt) * 6;
-        colors[colorBaseIndex + 0] = color.value;
-        colors[colorBaseIndex + 1] = color.value;
-        colors[colorBaseIndex + 2] = color.value;
-        colors[colorBaseIndex + 3] = color.value;
-        colors[colorBaseIndex + 4] = color.value;
-        colors[colorBaseIndex + 5] = color.value;
+        for (int i = 0; i < 6; ++i) {
+          colors[colorBaseIndex + i] = color.value;
+        }
       }
     }
     final vertices = ui.Vertices.raw(
