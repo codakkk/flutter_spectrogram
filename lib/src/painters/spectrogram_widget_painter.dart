@@ -67,7 +67,9 @@ class SpectrogramWidgetPainter extends CustomPainter {
       tmin - 0.49999 * spectrogram.timeBetweenTimeSlices,
       tmax + 0.49999 * spectrogram.timeBetweenTimeSlices,
     );
-
+    debugPrint(
+      'ItMin: $itmin - ItMax: $itmax',
+    );
     // ignore: unused_local_variable
     final (nf, ifmin, ifmax) = spectrogram.getWindowSamplesY(
       fmin - 0.49999 * spectrogram.frequencyStepHz,
@@ -165,6 +167,7 @@ class SpectrogramWidgetPainter extends CustomPainter {
 
     final cellWidth = width / nt;
     final cellHeight = height / nf;
+
     for (int t = 0; t < nt; t++) {
       for (int f = 0; f < nf; f++) {
         // Power
@@ -204,19 +207,14 @@ class SpectrogramWidgetPainter extends CustomPainter {
     final width = size.width;
     final height = size.height;
 
-    final cellWidth = width / nt;
+    final cellWidth = width / (nt - 1);
     final cellHeight = height / nf;
 
-    int positionsSize = nt * nf * 6 * 2;
-    int colorsSize = nt * nf * 6;
+    debugPrint(
+      'NT: $nt - ${intensity.length} - Cell: $cellWidth - Width: ${size.width}',
+    );
 
-    if (_positionsBuffer == null || _positionsBuffer!.length < positionsSize) {
-      _positionsBuffer = Float32List(positionsSize);
-    }
-
-    if (_colorsBuffer == null || _colorsBuffer!.length < colorsSize) {
-      _colorsBuffer = Int32List(colorsSize);
-    }
+    final (positionsSize, colorsSize) = _ensureBuffersSize(nt, nf);
 
     final positions = _positionsBuffer!;
     final colors = _colorsBuffer!;
@@ -236,6 +234,14 @@ class SpectrogramWidgetPainter extends CustomPainter {
         final bottom = height - (f + 1) * cellHeight;
         final left = t * cellWidth;
         final right = (t + 1) * cellWidth;
+
+        if (left < 0) {
+          debugPrint('Left: $left');
+        }
+
+        if (right > size.width) {
+          debugPrint('Right: $right');
+        }
 
         final baseIndex = (t + f * nt) * 12;
 
@@ -281,7 +287,6 @@ class SpectrogramWidgetPainter extends CustomPainter {
 
     if (selectedFrequency >= fmin && selectedFrequency <= fmax) {
       final y = size.height - (selectedFrequency / fmax) * size.height;
-      debugPrint(y.toString());
 
       drawDashedLine(
         canvas: canvas,
@@ -290,6 +295,21 @@ class SpectrogramWidgetPainter extends CustomPainter {
         paint: Paint()..color = lineColor,
       );
     }
+  }
+
+  (int positions, int frequencies) _ensureBuffersSize(int nt, int nf) {
+    int positionsSize = nt * nf * 6 * 2;
+    int colorsSize = nt * nf * 6;
+
+    if (_positionsBuffer == null || _positionsBuffer!.length < positionsSize) {
+      _positionsBuffer = Float32List(positionsSize);
+    }
+
+    if (_colorsBuffer == null || _colorsBuffer!.length < colorsSize) {
+      _colorsBuffer = Int32List(colorsSize);
+    }
+
+    return (positionsSize, colorsSize);
   }
 
   @override

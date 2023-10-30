@@ -125,17 +125,7 @@ class _MainAppState extends State<MainApp> {
                 ),
               ],
             ),
-            _spectrogram != null
-                ? SpectrogramWidget(
-                    size: size,
-                    spectrogram: _spectrogram!,
-                    tmin: _spectrogram!.tmin,
-                    tmax: _spectrogram!.tmax,
-                    fmin: _spectrogram!.minFrequencyHz,
-                    fmax: _spectrogram!.maxFrequencyHz,
-                    applyDynamicRange: false,
-                  )
-                : const CircularProgressIndicator()
+            const CircularProgressIndicator()
           ],
         ),
       ),

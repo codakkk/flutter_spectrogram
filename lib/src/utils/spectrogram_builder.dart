@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:fftea/fftea.dart';
+import 'package:flutter/foundation.dart';
 
 import 'dart:math' as math;
 
@@ -70,18 +71,14 @@ class SpectrogramBuilder {
     final sound = _sound!;
 
     final nyquist = 0.5 / sound.samplingPeriod;
-    final physicalAnalysisWidth = 2 * _effectiveAnalysisWidth;
+    final physicalAnalysisWidth = 2.0 * _effectiveAnalysisWidth;
     final effectiveTimeWidth = _effectiveAnalysisWidth / math.sqrt(math.pi);
     final effectiveFreqWidth = 1.0 / effectiveTimeWidth;
+    final minTimeStep2 = effectiveTimeWidth / _maximumTimeOversampling;
+    final minFreqStep2 = effectiveFreqWidth / _maximumFreqOversampling;
 
-    final timeStep = math.max(
-      _minTimeStep,
-      effectiveTimeWidth / _maximumTimeOversampling,
-    );
-    double freqStep = math.max(
-      _minFreqStep,
-      effectiveFreqWidth / _maximumFreqOversampling,
-    );
+    final timeStep = math.max(_minTimeStep, minTimeStep2);
+    double freqStep = math.max(_minFreqStep, minFreqStep2);
 
     final physicalDuration = sound.samplingPeriod * sound.numberOfSamples;
 
@@ -111,6 +108,8 @@ class SpectrogramBuilder {
             ((sound.numberOfSamples - 1) * sound.samplingPeriod -
                 (numberOfTimes - 1) * timeStep);
 
+    debugPrint('noOftimes: $numberOfTimes');
+
     // Compute the freq sampling of the FFT
 
     if (_frequencyMax <= 0.0 || _frequencyMax > nyquist) {
@@ -130,7 +129,8 @@ class SpectrogramBuilder {
       nSampFFT *= 2;
     }
 
-    final int halfNSampFFT = 32; // nSampFFT ~/ 32; // (44100 * 0.0025).toInt();
+    final int halfNSampFFT =
+        nSampFFT ~/ 32; // nSampFFT ~/ 32; // (44100 * 0.0025).toInt();
 
     final binWidthSamples =
         math.max(1, (freqStep * sound.samplingPeriod * nSampFFT)).floor();
@@ -189,7 +189,7 @@ class SpectrogramBuilder {
       tmin: sound.xmin,
       tmax: sound.xmax,
       numberOfTimeSlices: logBinnedData.length,
-      timeBetweenTimeSlices: timeStep,
+      timeBetweenTimeSlices: timeStep, // halfNSampFFT / logBinnedData.length,
       centerOfFirstTimeSlice: t1,
       minFrequencyHz: 0.0,
       maxFrequencyHz: _frequencyMax,
