@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
+import 'package:flutter_spectrogram/src/models/cfunction.dart';
+import 'package:flutter_spectrogram/src/models/vector.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:wav/wav.dart';
-
-part 'sound.freezed.dart';
 
 /*
 
@@ -27,21 +27,18 @@ The frequency axis for the FFT is linked to the number N
 
 // This is the same as Praat's Sound object.
 @freezed
-class Sound with _$Sound {
-  const Sound._();
-
-  const factory Sound({
-    required double xmin, // Seconds
-    required double xmax, // Seconds
-    required int numberOfSamples, // nx
-    required double
-        samplingPeriod, // Time interval between two successive sampling points (my dx)
-    required double timeOfFirstSample, // Seconds (x1)
-    @Default(1) int ymin, // Left or only channel
-    required int ymax, // right or only channels
-    required int numberOfChannels, // ny
-    required List<Float64List> amplitudes, // z
-  }) = _Sound;
+class Sound extends Vector {
+  Sound({
+    required super.xmin,
+    required super.xmax,
+    required super.numberOfSamples,
+    required super.samplingPeriod,
+    required super.timeOfFirstSample,
+    required super.ymin,
+    required super.ymax,
+    required super.numberOfChannels,
+    required super.amplitudes,
+  });
 
   (int nt, int itmin, int itmax) getWindowSamples(double xmin, double xmax) {
     final ixminReal =
@@ -166,11 +163,9 @@ class Sound with _$Sound {
 
     //
     if (!preserveTimes) {
-      extracted = extracted.copyWith(
-        xmin: 0.0,
-        xmax: extracted.xmax - tmin,
-        timeOfFirstSample: extracted.timeOfFirstSample - tmin,
-      );
+      extracted.xmin = 0.0;
+      extracted.xmax = extracted.xmax - tmin;
+      extracted.timeOfFirstSample = extracted.timeOfFirstSample - tmin;
     }
 
     for (int channel = 0; channel < extracted.numberOfChannels; ++channel) {

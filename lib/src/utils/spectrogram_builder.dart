@@ -108,8 +108,6 @@ class SpectrogramBuilder {
             ((sound.numberOfSamples - 1) * sound.samplingPeriod -
                 (numberOfTimes - 1) * timeStep);
 
-    debugPrint('noOftimes: $numberOfTimes');
-
     // Compute the freq sampling of the FFT
 
     if (_frequencyMax <= 0.0 || _frequencyMax > nyquist) {
@@ -129,14 +127,12 @@ class SpectrogramBuilder {
       nSampFFT *= 2;
     }
 
-    final int halfNSampFFT =
-        nSampFFT ~/ 2; // nSampFFT ~/ 32; // (44100 * 0.0025).toInt();
-
     final binWidthSamples =
         math.max(1, (freqStep * sound.samplingPeriod * nSampFFT)).floor();
     final binWidthHertz = 1.0 / (sound.samplingPeriod * nSampFFT);
     freqStep = binWidthSamples * binWidthHertz;
-    numberOfFreqs = (_frequencyMax / freqStep).floor();
+    numberOfFreqs = (_frequencyMax / freqStep).floor() *
+        2; // this multiplication by two shouldn't be there lol
 
     if (numberOfFreqs < 1) {
       return Spectrogram.zero;
@@ -155,8 +151,6 @@ class SpectrogramBuilder {
 
     Uint64List? logItr;
     final List<List<double>> logBinnedData = [];
-
-    //const buckets = 120;
 
     stft.run(
       sound.amplitudes[0],
@@ -183,13 +177,13 @@ class SpectrogramBuilder {
           i0 = i1;
         }
       },
-      halfNSampFFT,
+      sound.numberOfSamples ~/ numberOfTimes,
     );
     return Spectrogram(
       tmin: sound.xmin,
       tmax: sound.xmax,
       numberOfTimeSlices: logBinnedData.length,
-      timeBetweenTimeSlices: timeStep, // halfNSampFFT / logBinnedData.length,
+      timeBetweenTimeSlices: timeStep,
       centerOfFirstTimeSlice: t1,
       minFrequencyHz: 0.0,
       maxFrequencyHz: _frequencyMax,

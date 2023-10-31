@@ -49,14 +49,6 @@ class SpectrogramWidgetPainter extends CustomPainter {
   static Float32List? _positionsBuffer;
   static Int32List? _colorsBuffer;
 
-  /*double colToX(double col) =>
-        spectrogram.centerOfFirstTimeSlice +
-        (col - 1.0) * spectrogram.timeBetweenTimeSlices;
-
-    double rowToY(double row) =>
-        spectrogram.centerOfFirstFrequencyBandHz +
-        (row - 1.0) * spectrogram.frequencyStepHz;*/
-
   @override
   void paint(Canvas canvas, Size size) {
     double currentMaximum = maximum;
@@ -67,9 +59,7 @@ class SpectrogramWidgetPainter extends CustomPainter {
       tmin - 0.49999 * spectrogram.timeBetweenTimeSlices,
       tmax + 0.49999 * spectrogram.timeBetweenTimeSlices,
     );
-    debugPrint(
-      'ItMin: $itmin - ItMax: $itmax',
-    );
+
     // ignore: unused_local_variable
     final (nf, ifmin, ifmax) = spectrogram.getWindowSamplesY(
       fmin - 0.49999 * spectrogram.frequencyStepHz,
@@ -205,12 +195,8 @@ class SpectrogramWidgetPainter extends CustomPainter {
     final width = size.width;
     final height = size.height;
 
-    final cellWidth = width / (nt - 1);
+    final cellWidth = width / nt;
     final cellHeight = height / nf;
-
-    debugPrint(
-      'NT: $nt - ${intensity.length} - Cell: $cellWidth - Width: ${size.width}',
-    );
 
     final (positionsSize, colorsSize) = _ensureBuffersSize(nt, nf);
 

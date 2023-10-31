@@ -58,7 +58,7 @@ class _SpectrogramWidgetState extends State<SpectrogramWidget> {
             Text(
               '${widget.selectedFrequency} Hz',
               style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
+                    color: widget.lineColor,
                   ),
             ),
             const Spacer(),

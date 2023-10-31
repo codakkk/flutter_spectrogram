@@ -82,4 +82,18 @@ class Spectrogram with _$Spectrogram {
 
     return (nf, iymin, iymax);
   }
+
+  double indexToX(int index) =>
+      centerOfFirstTimeSlice + index * timeBetweenTimeSlices;
+  double xToIndex(double x) =>
+      (x - centerOfFirstTimeSlice) / timeBetweenTimeSlices;
+
+  int xToLowIndex(double x) =>
+      ((x - centerOfFirstTimeSlice) / timeBetweenTimeSlices).floor();
+
+  int xToHighIndex(double x) =>
+      ((x - centerOfFirstTimeSlice) / timeBetweenTimeSlices).ceil();
+
+  int xToNearestIndex(double x) =>
+      ((x - centerOfFirstTimeSlice) / timeBetweenTimeSlices).round();
 }
