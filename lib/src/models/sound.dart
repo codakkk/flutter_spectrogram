@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:flutter_spectrogram/src/models/cfunction.dart';
 import 'package:flutter_spectrogram/src/models/vector.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:wav/wav.dart';
